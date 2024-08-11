@@ -1,0 +1,26 @@
+west-commands:
+  - file: scripts/mpv_commands.py
+    commands:
+      - name: mpv-update
+        class: MpvUpdate
+        help: Update the workspace with the components configure to download
+      - name: mpv-merge
+        class: MpvMerge
+        help: Merge between branches in the same project
+      - name: mpv-new-proj
+        class: MpvNewProj
+        help: Create new project or new version with all required branches
+      - name: mpv-tag
+        class: MpvTag
+        help: Create tags with the same name to all projects, and create west.yml with the new tags
+      - name: mpv-init
+        class: MpvInit
+        help: Initialize new project from scratch
+      - name: mpv-manifest
+        class: MpvManifest
+        help: Update the manifest (west.yml) with new one
+
+      - name: mpv-temp
+        class: MpvTemp
+        help: For development purpose only
+        
