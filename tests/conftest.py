@@ -1,4 +1,4 @@
-#  pytest.exe
+#  pytest
 
 import os
 from pathlib import Path, PurePath
