@@ -569,6 +569,15 @@ class ManifestMpv:
         else:
             return False
 
+def mpv_from_yml(man: manifest.Manifest, branch: str) -> ManifestMpv:
+    '''
+    Read mpv.yml from branch, and return ManifestMpv 
+    '''
+    manifest_proj = man.get_projects(['manifest'])[0]
+    mpv_str = manifest_proj.read_at("mpv.yml", branch).decode('utf-8')
+    mpv_manifest = ManifestMpv.from_data(mpv_str, topdir=man.topdir)
+    return mpv_manifest
+ 
 
 def add_mpv_project_2_manifest(mpv_project: ProjectMpv, mpv_man: ManifestMpv):
     mpv_projects = mpv_man.projects
@@ -876,10 +885,15 @@ class MpvUpdate(WestCommand):
                             that contain the version of all the repos.
                             This version can also define with west init command.''')
 
-        parser.add_argument('--prune_all', dest='prune_all', action='store_true', 
+        parser.add_argument('--prune-all', dest='prune_all', action='store_true', 
                             help='''Delete the local branch that their upstream was gone.''')
+        
+        parser.add_argument('--full-clone', dest='full_clone', action='store_true', 
+                            help='''clone or fetch all commits from remote, 
+                                    and ignore clone-depth field in west.yml.''')
 
         return parser
+
 
     def do_run(self, args, unknown):
         log.banner(f"Update workspace: {util.west_topdir()}")
@@ -927,36 +941,52 @@ class MpvUpdate(WestCommand):
         buildin_update_command(self.topdir, self.manifest)
 
         log.banner(f"Checkout projects to the revision in manifest file")
+        mpv_manifest = mpv_from_yml(self.manifest, "HEAD")
         for project in self.manifest.projects:
             log.banner(f"project: {project.name}")
             log.inf(f"project location: {project.abspath}")
             log.dbg(
                 f"Project {project.name} is active: {self.manifest.is_active(project)} and is cloned: {project.is_cloned()}")
+            project_mpv = mpv_manifest.get_projects([project.name])[0]
+
+            content: ContentType = None
+            if project_mpv == None:
+                log.wrn(f'project_mpv for project {project.name} is None - continue')
+            else:
+                content = project_mpv.content
+
             if (self.manifest.is_active(project) and
                     project.is_cloned() and
-                    # TODO: replace name with mpv content of COMMAND
-                    project.name != 'mpv-git-west-commands' and
+                    content != ContentType.COMMANDS and
                     project.name != 'manifest'):
-                log.inf(f"fetch content")
-                project.git(['fetch', '--prune', '-t', '-f', '--all'], check=False)
-                if args.prune_all == True:
-                    log.dbg(f"prune_all==True, revmoe local branch with gone upstream")
-                    cp = project.git('branch  --format="%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)"',
-                                     capture_stdout=True, capture_stderr=True,
-                                     check=False)
-                    branch2del = cp.stdout.decode('ascii').strip(' "\n\r').splitlines()
-                    # Remove empty strings:
-                    branch2del = list(filter(None, branch2del))
-                    log.inf(f"list of branch to delete: \n{branch2del}")
-                    if len(branch2del) > 0:
-                        branch2del = ' '.join(branch2del)
-                        log.inf(f"delete the local branch without upstream: \n{branch2del}")
-                        project.git(f"branch -D {branch2del}",
-                            check=False)
-                log.inf(f"git checkout to {project.revision}")
-                project.git(['checkout', project.revision, "--"])
-                project.git(['pull'],
-                            check=False)
+
+                # Do full clone only if clone depth is less then 1 or argument full-clone exist
+                # Else - Use the already clone or fetch that west update did
+                if ((project.clone_depth == None or project.clone_depth < 1) or args.full_clone == True):
+                    log.inf(f"fetch all content")
+                    project.git(['fetch', '--prune', '-t', '-f', '--all'], check=False)
+                    if args.prune_all == True:
+                        log.dbg(f"prune_all==True, remove local branch with gone upstream")
+                        cp = project.git('branch --format="%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)"',
+                                        capture_stdout=True, capture_stderr=True,
+                                        check=False)
+                        branch2del = cp.stdout.decode('ascii').strip(' "\n\r').splitlines()
+                        # Remove empty strings:
+                        branch2del = list(filter(None, branch2del))
+                        log.inf(f"list of branch to delete: \n{branch2del}")
+                        if len(branch2del) > 0:
+                            branch2del = ' '.join(branch2del)
+                            log.inf(f"delete the local branch without upstream: \n{branch2del}")
+                            project.git(f"branch -D {branch2del}",
+                                check=False)
+                    log.inf(f"git checkout to {project.revision}")
+                    project.git(['checkout', project.revision, "--"])
+                    project.git(['pull'],
+                                check=False)
+                else:
+                    log.inf(f"Checkout to commit, with depth {project.clone_depth}")
+                    project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=False)
+
             elif project.name == 'manifest':
                 log.inf(f"Skipped manifest project")
             else:
@@ -1443,9 +1473,10 @@ class MpvTag(WestCommand):
         message = f"Create by mpv-tag command \nUser message: " + message
         log.dbg(f"tag message: {message}")
 
-        manifest_proj = self.manifest.get_projects(['manifest'])[0]
-        mpv_str = manifest_proj.read_at("mpv.yml", "HEAD").decode('utf-8')
-        mpv_manifest = ManifestMpv.from_data(mpv_str, topdir=self.manifest.topdir)
+        # manifest_proj = self.manifest.get_projects(['manifest'])[0]
+        # mpv_str = manifest_proj.read_at("mpv.yml", "HEAD").decode('utf-8')
+        # mpv_manifest = ManifestMpv.from_data(mpv_str, topdir=self.manifest.topdir)
+        mpv_manifest = mpv_from_yml(self.manifest, "HEAD")
         manifest_len = len(self.manifest.projects)
         i = 0
 

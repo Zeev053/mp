@@ -1,5 +1,5 @@
 # How to run: 
-# pytest.exe -s -k test_mpv_merge --junit-xml=junit.xml
+# pytest -s -k test_mpv_merge --junit-xml=junit.xml
 # When:
 # -s -> No capture, print all to screen
 # -k test_mpv_merge -> Run only this test
