@@ -69,7 +69,7 @@ def mpv_update_tmpdir(west_init_tmpdir):
     print("")
     print("mpv_update_tmpdir()")
     cmd('update', cwd=str(west_init_tmpdir))
-    cmd('mpv-update', cwd=str(west_init_tmpdir))
+    cmd('mpv-update --full-clone', cwd=str(west_init_tmpdir))
     return west_init_tmpdir
 
 
@@ -90,11 +90,19 @@ def mpv_update_tmpdir_f_m2(west_init_tmpdir):
 
 
 @pytest.fixture
+def mpv_update_tmpdir_clone_depth(west_init_tmpdir):
+    # Like west_init_tmpdir, but also runs west update only for F_M2 group
+    cmd('update', cwd=str(west_init_tmpdir))
+    cmd('mpv-update', cwd=str(west_init_tmpdir))
+    return west_init_tmpdir
+
+
+@pytest.fixture
 def mpv_init_tmpdir(mpv_update_tmpdir):
-    # Create new project with name proj_1, and versoin 1.0.0
+    # Create new project with name proj_1, and version 1.0.0
     print("")
     print("mpv_init_tmpdir()")
-    print("Create new project with name proj_1, and versoin 1.0.0:")
+    print("Create new project with name proj_1, and version 1.0.0:")
     cmd('mpv-init proj_1 1.0.0', cwd=str(mpv_update_tmpdir))
     return mpv_update_tmpdir
 
@@ -106,7 +114,7 @@ def mpv_new_proj_tmpdir(mpv_init_tmpdir):
     print("")
     print(f"mpv_new_proj_tmpdir() - mpv_init_tmpdir: {mpv_init_tmpdir}")
 
-    cmd('mpv-update --mr proj_1__1.0.0_dev', cwd=str(mpv_init_tmpdir))
+    cmd('mpv-update --full-clone --mr proj_1__1.0.0_dev', cwd=str(mpv_init_tmpdir))
 
     module1_src_apath = mpv_init_tmpdir.joinpath("MODULE1/module1-src")
     module2_data_apath = mpv_init_tmpdir.joinpath("MODULE2/module2-data")
@@ -151,7 +159,7 @@ def mpv_merge_tmpdir(mpv_new_proj_tmpdir):
     ######################################
     ### Take care to proj_1__1.0.0_dev,
     #####################################
-    cmd('mpv-update --mr proj_1__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+    cmd('mpv-update --full-clone --mr proj_1__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
 
     print(f"mpv_merge_tmpdir() - update west.yml with tag2 for external1, and add commit to: mpv-test-git-manager, in proj_1__1.0.0_dev")
     source_file = git_manager_apath.joinpath("west.yml")
@@ -206,7 +214,7 @@ def mpv_merge_tmpdir(mpv_new_proj_tmpdir):
     ### Take care to dummy_d__1.0.0_dev
     #####################################
     print(f"mpv_merge_tmpdir() - call 'mpv-update --mr dummy_d__1.0.0_dev'")
-    cmd('mpv-update --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+    cmd('mpv-update --full-clone --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
 
     print(f"mpv_merge_tmpdir() - add commit to: MODULE2/module2-data, in dummy_d__1.0.0_dev")
     add_commit(module2_data_apath, 'In method mpv_merge_tmpdir - dummy_d__1.0.0_dev',
@@ -226,7 +234,7 @@ def mpv_merge_tmpdir(mpv_new_proj_tmpdir):
     ### Take care to dummy_s__1.0.0_dev
     #####################################
     print(f"mpv_merge_tmpdir() - call 'mpv-update --mr dummy_s__1.0.0_dev'")
-    cmd('mpv-update --mr dummy_s__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+    cmd('mpv-update --full-clone --mr dummy_s__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
 
     print(f"mpv_merge_tmpdir() - add commit to: MODULE1/module1-src, in dummy_s__1.0.0_dev")
     add_commit(module1_src_apath, 'In method mpv_merge_tmpdir - dummy_s__1.0.0_dev',
@@ -272,6 +280,7 @@ def remove_space(string):
 
 
 def test_mpv_update(mpv_update_tmpdir):
+    print("\n\n\n\n--------------------------------")
     print(f"west_update_tmpdir: {mpv_update_tmpdir}")
     wct = mpv_update_tmpdir
 
@@ -297,7 +306,7 @@ def test_mpv_update(mpv_update_tmpdir):
     
     
     ##################
-    # TODO: Cotinue
+    # TODO: Continue
     ##################
 
     external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'], cwd=str(mpv_update_tmpdir))
@@ -335,6 +344,7 @@ def test_mpv_update(mpv_update_tmpdir):
 
 
 def test_mpv_update_f_m1(mpv_update_tmpdir_f_m1):
+    print("\n\n\n\n--------------------------------")
     print(f"west_update_tmpdir_f_m1: {mpv_update_tmpdir_f_m1}")
     wct = mpv_update_tmpdir_f_m1
 
@@ -388,6 +398,7 @@ def test_mpv_update_f_m1(mpv_update_tmpdir_f_m1):
 
 
 def test_mpv_update_f_m2(mpv_update_tmpdir_f_m2):
+    print("\n\n\n\n--------------------------------")
     print(f"west_update_tmpdir_f_m2: {mpv_update_tmpdir_f_m2}")
     wct = mpv_update_tmpdir_f_m2
 
@@ -432,8 +443,114 @@ def test_mpv_update_f_m2(mpv_update_tmpdir_f_m2):
     # assert nested_modules_git_manager_revision == 'tag_nested'
 
 
+
+# mpv_update_tmpdir_clone_depth
+def test_mpv_update_clone_depth(mpv_update_tmpdir_clone_depth):
+    print("\n\n\n\n--------------------------------")
+    print(f"test_mpv_update_clone_depth: {test_mpv_update_clone_depth}")
+    wct = mpv_update_tmpdir_clone_depth
+
+    module1_src_apath = wct.joinpath("MODULE1/module1-src")
+    module1_data_apath = wct.joinpath("MODULE1/module1-data")
+    module2_src_apath = wct.joinpath("MODULE2/module2-src")
+    module2_data_apath = wct.joinpath("MODULE2/module2-data")
+
+    # Validate that only repositories of F_M2 group where clone (include in nested west.yml)
+    assert wct.exists()
+    assert wct.is_dir()
+    assert (module1_src_apath).is_dir()
+    assert wct.joinpath("MODULE1/module1-src/main.cpp").is_file()
+    assert (module1_data_apath).is_dir()
+    assert (module2_src_apath).is_dir()
+    assert wct.joinpath("MODULE2/module2-src/main.cpp").is_file()
+    assert (module2_data_apath).is_dir()
+    assert wct.joinpath("EXTERNAL/external1").is_dir()
+    assert wct.joinpath("PROJECTS_COMMON/proj_common").is_dir()
+    # assert wct.joinpath("EXTERNAL/NESTED/nested-modules-git-manager").is_dir()
+    # assert not wct.joinpath("EXTERNAL/NESTED/NESTED_MODULE/module1-nested-data").is_dir()
+    # assert not wct.joinpath("EXTERNAL/NESTED/NESTED_MODULE/module1-nested-src").is_dir()
+    assert wct.joinpath("mpv-test-git-manager").is_dir()
+
+    # Validate that the revision in cloned repositories is correct
+    external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'],
+                                      cwd=str(wct))
+    external1_revision = remove_space(external1_revision)
+    assert external1_revision == 'tag_1'
+    
+    proj_common_revision = check_output(['west', 'list', '-f "{revision}"', 'proj_common'],
+                                      cwd=str(wct)).strip(' "\n\r')
+    assert proj_common_revision == 'develop'
+    
+    #########################
+    ### check module1_src ###
+    module1_src_revision = check_output(['west', 'list', '-f "{revision}"', 'module1-src'],
+                                        cwd=str(wct))
+    module1_src_revision = remove_space(module1_src_revision)
+    assert module1_src_revision == 'main'
+    # check clone depth of module1_src - should be false
+    is_shallow_module1_src = check_output(["git", "rev-parse", "--is-shallow-repository"],
+        cwd=str(module1_src_apath)).strip(' "\n\r')
+    assert is_shallow_module1_src == 'false'
+    module1_src_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'module1-src'],
+                                        cwd=str(wct)).strip(' "\n\r')
+    assert module1_src_depth == 'None'
+
+    ##########################
+    ### check module1_data ###
+    module1_data_revision = check_output(['west', 'list', '-f "{revision}"', 'module1-data'],
+                                         cwd=str(mpv_update_tmpdir_clone_depth))
+    module1_data_revision = remove_space(module1_data_revision)
+    assert module1_data_revision == 'main'
+    # check clone depth of module1_data - should be true
+    is_shallow_module1_data = check_output(["git", "rev-parse", "--is-shallow-repository"],
+        cwd=str(module1_data_apath)).strip(' "\n\r')
+    assert is_shallow_module1_data == 'true'
+    module1_data_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'module1-data'],
+                                        cwd=str(wct)).strip(' "\n\r')
+    assert module1_data_depth == '1'
+
+
+    #########################
+    ### check module2_src ###
+    module2_src_revision = check_output(['west', 'list', '-f "{revision}"', 'module2-src'],
+                                        cwd=str(mpv_update_tmpdir_clone_depth))
+    module2_src_revision = remove_space(module2_src_revision)
+    assert module2_src_revision == 'main'
+    # check clone depth of module2_src - should be true
+    is_shallow_module2_src = check_output(["git", "rev-parse", "--is-shallow-repository"],
+        cwd=str(module2_src_apath)).strip(' "\n\r')
+    assert is_shallow_module2_src == 'true'
+    module2_src_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'module2-src'],
+                                        cwd=str(wct)).strip(' "\n\r')
+    assert module2_src_depth == '1'
+
+
+    ##########################
+    ### check module2_data ###
+    module2_data_revision = check_output(['west', 'list', '-f "{revision}"', 'module2-data'],
+                                        cwd=str(mpv_update_tmpdir_clone_depth))
+    module2_data_revision = remove_space(module2_data_revision)
+    assert module2_data_revision == 'main'
+    # check clone depth of module2_data - should be false
+    is_shallow_module2_data = check_output(["git", "rev-parse", "--is-shallow-repository"],
+        cwd=str(module2_data_apath)).strip(' "\n\r')
+    assert is_shallow_module2_data == 'false'
+    module2_data_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'module2-data'],
+                                        cwd=str(wct)).strip(' "\n\r')
+    assert module2_data_depth == 'None'
+
+
+    # nested_modules_git_manager_revision = check_output(
+        # ['west', 'list', '-f "{revision}"', 'nested-modules-git-manager'],
+        # cwd=str(mpv_update_tmpdir_f_m2))
+    # nested_modules_git_manager_revision = remove_space(nested_modules_git_manager_revision)
+    # assert nested_modules_git_manager_revision == 'tag_nested'
+
+
+
 def test_mpv_init(mpv_init_tmpdir):
     # Validate that the type of the project is source_data in mpv.yml
+    print("\n\n\n\n--------------------------------")
     with open('mpv-test-git-manager/mpv.yml', 'r') as file:
         mpv_yaml = yaml.safe_load(file)
     assert mpv_yaml['manifest']['self']['merge-method'] == 'SOURCE_DATA'
@@ -453,7 +570,10 @@ def test_mpv_init(mpv_init_tmpdir):
         print(f"rev_main of {'remotes/origin/main'} is {rev_main}")
 
         # Validate the revision from remote is the for all branches
+        # rep-depth = check_output(['west', 'list', '-f " {revision}"', f'{rep}']
         for sub in sub_branch:
+            # If repo depth is 1 - there is no main branch
+            # if rep-depth != '1':
             assert rev_main == rev_parse(repo_path, sub) 
             assert rev_main == rev_parse(repo_path, 'remotes/origin/' + sub)
 
@@ -475,6 +595,7 @@ def test_mpv_init(mpv_init_tmpdir):
 
 
 def test_mpv_new_proj(mpv_new_proj_tmpdir):
+    print("\n\n\n\n--------------------------------")
     print(f"test_mpv_new_proj: {mpv_new_proj_tmpdir}")
 
     ################ Test dummy_s__1.0.0 ############################
@@ -582,6 +703,11 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
     assert "develop" in proj_common_repo_status
 
 
+
+
+
+
+
 def test_mpv_merge(mpv_merge_tmpdir):
     '''
     The files that should be validate are:
@@ -598,6 +724,7 @@ def test_mpv_merge(mpv_merge_tmpdir):
                                data2_oldfile.cpp (new file from proj_1__1)
     4. EXTERNAL/external1 -> external.cpp (tag_2)
     '''
+    print("\n\n\n\n--------------------------------")
     print("")
     print(f"test_mpv_merge(): mpv_merge_tmpdir: {mpv_merge_tmpdir}")
 
@@ -766,7 +893,7 @@ def test_mpv_params_merge(mpv_merge_tmpdir):
                                data2_oldfile.cpp (new file from proj_1__1)
     4. EXTERNAL/external1 -> external.cpp (tag_2)
     '''
-    print("")
+    print("\n\n\n\n--------------------------------")
     print(f"test_mpv_params_merge(): mpv_merge_tmpdir: {mpv_merge_tmpdir}")
 
     #####################################################
@@ -825,7 +952,7 @@ def validate_params_merge(base_path):
     # TODO: add validation to proj_common
 
     #########
-    # TODO: check if this should be true: it might be that we shoud move all repos to dest branch,
+    # TODO: check if this should be true: it might be that we should move all repos to dest branch,
     #       include the repos that should not merge now.
     # ##. MODULE2/module2-src:
     print(f"MODULE2/module2-src - because this repo don't merge - the branch shouldn't change")
@@ -872,7 +999,7 @@ def validate_params_merge(base_path):
 
 ###########################################################################################
 def test_mpv_tag(mpv_update_tmpdir):
-    print("")
+    print("\n\n\n\n--------------------------------")
     print("test_mpv_tag()")
     
     manifest_apath = mpv_update_tmpdir.joinpath("mpv-test-git-manager")

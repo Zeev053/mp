@@ -55,6 +55,7 @@ manifest:
     path: MODULE1/module1-data
     revision: main
     url: THE_URL_BASE/module1-data
+    clone-depth: 1
     groups:
     - F_M1
 
@@ -64,6 +65,7 @@ manifest:
     path: MODULE2/module2-src
     revision: main
     url: THE_URL_BASE/module2-src
+    clone-depth: 1
     groups:
     - F_M2
 
