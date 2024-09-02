@@ -938,6 +938,8 @@ class MpvUpdate(WestCommand):
         self.manifest = manifest.Manifest.from_file()
 
         # Call to west update build-in command
+        # TODO: consider call west update with -n (--narrow),
+        #       then the tags will not download
         buildin_update_command(self.topdir, self.manifest)
 
         log.banner(f"Checkout projects to the revision in manifest file")
@@ -984,8 +986,17 @@ class MpvUpdate(WestCommand):
                     project.git(['pull'],
                                 check=False)
                 else:
-                    log.inf(f"Checkout to commit, with depth {project.clone_depth}")
-                    project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=False)
+                    cp = project.git(f'ls-remote --heads', check=False, capture_stdout=True)
+                    branches = cp.stdout.decode('ascii').strip()
+                    cp = project.git(f'ls-remote --tags', check=False, capture_stdout=True)
+                    tags = cp.stdout.decode('ascii').strip()
+                    if f"{project.revision}" in branches:
+                        log.inf(f"fetch remote branch {project.revision} with depth {project.clone_depth}")
+                        project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=True)
+                    elif f"{project.revision}" in tags:
+                        log.inf(f"fetch remote tag {project.revision} with depth {project.clone_depth}")
+                        project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/tags/{project.revision}', check=True)
+
 
             elif project.name == 'manifest':
                 log.inf(f"Skipped manifest project")
@@ -1627,10 +1638,11 @@ class MpvInit(WestCommand):
         mpv_update_cmnd = MpvUpdate()
         update_cmnd_parser = argparse.ArgumentParser(description='dummy parser to mpv-update command')
         update_cmnd_parser.add_argument('-v', '--verbose', default=0, action='count')
+        update_cmnd_parser.add_argument('--full-clone', dest='full_clone', action='store_true')
         update_cmnd_parser.verbose = args.verbose
         subparser_gen = update_cmnd_parser.add_subparsers(metavar='<command>', dest='command')
         mpv_update_cmnd.add_parser(subparser_gen)
-        update_args = update_cmnd_parser.parse_args(['mpv-update'])
+        update_args = update_cmnd_parser.parse_args(['mpv-update', '--full-clone'])
         # log.dbg(f"unknown: {unknown}")
         log.inf("Call west mpv-update command:")
         mpv_update_cmnd.run(update_args, None, self.topdir, self.manifest)

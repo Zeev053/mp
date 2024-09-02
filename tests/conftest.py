@@ -82,6 +82,7 @@ manifest:
     path: EXTERNAL/external1
     revision: tag_1
     url: THE_URL_BASE/external1
+    clone-depth: 1
     groups:
     - F_M1
     - F_M2
@@ -238,6 +239,24 @@ def _session_repos(tmp_path_factory):
                 '''})
 
     add_tag(rp['external1'], 'tag_1')
+
+    add_commit(rp['external1'], 'external1 after tag_1 commit',
+               files={'main.cpp': '''
+                after tag_1
+                #pragma once
+                #include <iostream>
+                '''})
+
+    add_commit(rp['external1'], 'external1 commit after after tag_1 commit',
+               files={'main.cpp': '''
+                after after tag_1
+                #pragma once
+                #include <iostream>
+                '''})
+
+
+    add_tag(rp['external1'], 'tag_3')
+
 
     create_branch(rp['proj_common'], 'develop', True)
     add_commit(rp['proj_common'], 'proj_common in develop branch commit',

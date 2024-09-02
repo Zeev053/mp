@@ -454,6 +454,7 @@ def test_mpv_update_clone_depth(mpv_update_tmpdir_clone_depth):
     module1_data_apath = wct.joinpath("MODULE1/module1-data")
     module2_src_apath = wct.joinpath("MODULE2/module2-src")
     module2_data_apath = wct.joinpath("MODULE2/module2-data")
+    external1_apath = wct.joinpath("EXTERNAL/external1")
 
     # Validate that only repositories of F_M2 group where clone (include in nested west.yml)
     assert wct.exists()
@@ -471,12 +472,6 @@ def test_mpv_update_clone_depth(mpv_update_tmpdir_clone_depth):
     # assert not wct.joinpath("EXTERNAL/NESTED/NESTED_MODULE/module1-nested-src").is_dir()
     assert wct.joinpath("mpv-test-git-manager").is_dir()
 
-    # Validate that the revision in cloned repositories is correct
-    external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'],
-                                      cwd=str(wct))
-    external1_revision = remove_space(external1_revision)
-    assert external1_revision == 'tag_1'
-    
     proj_common_revision = check_output(['west', 'list', '-f "{revision}"', 'proj_common'],
                                       cwd=str(wct)).strip(' "\n\r')
     assert proj_common_revision == 'develop'
@@ -538,6 +533,32 @@ def test_mpv_update_clone_depth(mpv_update_tmpdir_clone_depth):
     module2_data_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'module2-data'],
                                         cwd=str(wct)).strip(' "\n\r')
     assert module2_data_depth == 'None'
+
+
+    ##########################
+    ### check external1 ###
+    # Validate that the revision in cloned repositories is correct
+    external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'],
+                                      cwd=str(wct))
+    external1_revision = remove_space(external1_revision)
+    assert external1_revision == 'tag_1'
+    # check clone depth of external1 - should be false
+    is_shallow_external1 = check_output(["git", "rev-parse", "--is-shallow-repository"],
+        cwd=str(external1_apath)).strip(' "\n\r')
+    assert is_shallow_external1 == 'true'
+    external1_depth = check_output(['west', 'list', '-f "{clone_depth}"', 'external1'],
+                                        cwd=str(wct)).strip(' "\n\r')
+    assert external1_depth == '1'
+    # TODO: Currently all tags are clone, consider download only out tag with --narrow
+    #       and then update the test on external1
+
+    # TODO: Add test to branches test to check that the only the remote branch exist
+
+
+
+
+
+
 
 
     # nested_modules_git_manager_revision = check_output(
@@ -641,7 +662,7 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
 
     print("Check dummy_d 1.0.0")
     print("Call mpv-update to dummy_d__1.0.0_dev")
-    cmd('mpv-update --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+    cmd('mpv-update --full-clone --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
 
     # Validate that the type of the project is data in mpv.yml
     with open('mpv-test-git-manager/mpv.yml', 'r') as file:
