@@ -987,9 +987,9 @@ class MpvUpdate(WestCommand):
                                 check=False)
                 else:
                     cp = project.git(f'ls-remote --heads', check=False, capture_stdout=True)
-                    branches = cp.stdout.decode('ascii').strip()
+                    branches = cp.stdout.decode('ascii', errors='ignore').strip()
                     cp = project.git(f'ls-remote --tags', check=False, capture_stdout=True)
-                    tags = cp.stdout.decode('ascii').strip()
+                    tags = cp.stdout.decode('ascii', errors='ignore').strip()
                     if f"{project.revision}" in branches:
                         log.inf(f"fetch remote branch {project.revision} with depth {project.clone_depth}")
                         project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=True)
