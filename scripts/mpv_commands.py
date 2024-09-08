@@ -264,6 +264,42 @@ def get_remote_default_branch(project: manifest.Project) -> str:
     return ret
 
 
+def fetch_proj_depth(project: manifest.Project, fetch_depth: str):
+    '''
+    fetch repo with specific depth
+    '''
+    log.dbg(f"fetch_proj_depth() - project: {project.name} fetch_depth: {fetch_depth}")
+
+    # The output of git ls-remote is two columns: sha, ref
+    # e.g.:
+    # d377143716e7fda2400302c301ea84955789ba03	refs/heads/main
+    # We need to take only the second word of each line
+    
+    # Find branches
+    cp = project.git(f'ls-remote --heads -q', check=False, capture_stdout=True)
+    branches_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    branches_list = [line.split()[1] for line in branches_lines]
+    branches = ', '.join(branches_list)
+    log.dbg(f"the branches are: {branches}")
+    
+    # Find tags
+    cp = project.git(f'ls-remote --tags -q', check=False, capture_stdout=True)
+    tags_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    tags_list = [line.split()[1] for line in tags_lines]
+    tags = ', '.join(tags_list)
+    log.dbg(f"the tags are: {tags}")
+    
+    if f"{project.revision}" in branches:
+        log.dbg(f"fetch remote branch {project.revision} with depth {fetch_depth}")
+        project.git(f'fetch -f --depth {fetch_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=True)
+    elif f"{project.revision}" in tags:
+        log.dbg(f"fetch remote tag {project.revision} with depth {fetch_depth}")
+        project.git(f'fetch -f --depth {fetch_depth} --no-tags -- {project.url} +refs/tags/{project.revision}:refs/tags/{project.revision}', check=True)
+    else:
+        log.inf(f"depth: {fetch_depth}, the revision is sha: {project.revision} - already fetch by west update")
+        log.dbg(f"The revision {project.revision} might be sha - do no fetch, because west update did it")
+
+
 def dont_use_zephyr():
     log.dbg("Update configuration that we don't use Zephyr")
     update_config('zephyr', 'base', 'not-using-zephyr')
@@ -332,7 +368,7 @@ def buildin_update_command(topdir, manifest, projects_str: list = []):
     parser.add_argument('-v', '--verbose', default=0, action='count')
     subparser_gen = parser.add_subparsers(metavar='<command>',dest='command')
     update_cmnd.add_parser(subparser_gen)
-    argument = ['update'] + projects_str
+    argument = ['update', '-n'] + projects_str
     update_args, unknown = parser.parse_known_args(argument)
     log.inf(f"Call west update command for projects: {projects_str} - ")
     update_cmnd.run(update_args, unknown, topdir, manifest)
@@ -713,7 +749,7 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
         log.inf(f"")
         log.small_banner(f"project: {project.name}")
         log.dbg(
-            f"Project {project.name} is active: {self_manifest.is_active(project)} and is cloned: {project.is_cloned()}")
+            f"Project {project.name} is active: {self_manifest.is_active(project)} and is cloned: {project.is_cloned()}, clone-depth: {project.clone_depth}")
         if (self_manifest.is_active(project) and
                 project.is_cloned() and
                 # project.name != 'mpv-git-west-commands' and
@@ -890,7 +926,13 @@ class MpvUpdate(WestCommand):
         
         parser.add_argument('--full-clone', dest='full_clone', action='store_true', 
                             help='''clone or fetch all commits from remote, 
-                                    and ignore clone-depth field in west.yml.''')
+                                    and ignore clone-depth field in west.yml.
+                                    Can not define with --depth-1''')
+
+        parser.add_argument('--depth-1', dest='depth_1', action='store_true', 
+                            help='''clone or fetch all commits from remote, 
+                                    and use depth=1 for **ALL** repos.
+                                    Can not define with --full-clone''')
 
         return parser
 
@@ -904,6 +946,9 @@ class MpvUpdate(WestCommand):
 
         # Update the components that the user want to download
         update_filter_config(self.manifest, args)
+
+        if args.depth_1==True and args.full_clone==True:
+            log.die("Can not define simultaneously --depth-1 and full-clone")
 
         log.banner(f"Update west.yml in manifest repository")
         log.dbg(f"args.manifest_rev: {args.manifest_rev}")
@@ -948,7 +993,7 @@ class MpvUpdate(WestCommand):
             log.banner(f"project: {project.name}")
             log.inf(f"project location: {project.abspath}")
             log.dbg(
-                f"Project {project.name} is active: {self.manifest.is_active(project)} and is cloned: {project.is_cloned()}")
+                f"Project {project.name} is active: {self.manifest.is_active(project)} and is cloned: {project.is_cloned()}, clone-depth: {project.clone_depth}")
             project_mpv = mpv_manifest.get_projects([project.name])[0]
 
             content: ContentType = None
@@ -964,7 +1009,7 @@ class MpvUpdate(WestCommand):
 
                 # Do full clone only if clone depth is less then 1 or argument full-clone exist
                 # Else - Use the already clone or fetch that west update did
-                if ((project.clone_depth == None or project.clone_depth < 1) or args.full_clone == True):
+                if (args.depth_1 == False and ((project.clone_depth == None or project.clone_depth < 1) or args.full_clone == True)):
                     log.inf(f"fetch all content")
                     project.git(['fetch', '--prune', '-t', '-f', '--all'], check=False)
                     if args.prune_all == True:
@@ -983,21 +1028,21 @@ class MpvUpdate(WestCommand):
                                 check=False)
                     log.inf(f"git checkout to {project.revision}")
                     project.git(['checkout', project.revision, "--"])
-                    project.git(['pull'],
+                    cp = project.git(['branch', '--show-current'], capture_stdout=True, capture_stderr=True, check=False)
+                    current_branch = cp.stdout.decode('ascii', errors='ignore').strip()
+                    if len(current_branch) == 0:
+                        log.dbg(f"Not in branch (call git fetch): result of 'git branch--show-current' is: {current_branch}")
+                        project.git(['fetch'],
                                 check=False)
+                    else:
+                        log.dbg(f"In branch  (call git pull): result of 'git branch--show-current' is: {current_branch}")
+                        project.git(['pull'],
+                                check=False)
+                    
+                elif args.depth_1 == True:
+                    fetch_proj_depth(project, 1)
                 else:
-                    cp = project.git(f'ls-remote --heads', check=False, capture_stdout=True)
-                    branches = cp.stdout.decode('ascii', errors='ignore').strip()
-                    cp = project.git(f'ls-remote --tags', check=False, capture_stdout=True)
-                    tags = cp.stdout.decode('ascii', errors='ignore').strip()
-                    if f"{project.revision}" in branches:
-                        log.inf(f"fetch remote branch {project.revision} with depth {project.clone_depth}")
-                        project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=True)
-                    elif f"{project.revision}" in tags:
-                        log.inf(f"fetch remote tag {project.revision} with depth {project.clone_depth}")
-                        project.git(f'fetch -f --depth {project.clone_depth} -- {project.url} +refs/tags/{project.revision}', check=True)
-
-
+                    fetch_proj_depth(project, project.clone_depth)
             elif project.name == 'manifest':
                 log.inf(f"Skipped manifest project")
             else:
@@ -1191,7 +1236,7 @@ class MpvMerge(WestCommand):
 
             content = project_mpv.content
             log.dbg(
-                f"Project {project.name} is active: {self.manifest.is_active(project)}, and is cloned: {project.is_cloned()}, mpv content = {content}")
+                f"Project {project.name} is active: {self.manifest.is_active(project)}, and is cloned: {project.is_cloned()}, mpv content = {content}, clone-depth: {project.clone_depth}")
 
             # check if argument -t filter this repo from merge:
             if len(args.t) and not (content.name in args.t or project.name in args.t):
@@ -1517,7 +1562,7 @@ class MpvTag(WestCommand):
                     cp = project.git(['branch', '--show-current'],
                                      capture_stdout=True, capture_stderr=True,
                                      check=False)
-                    current_branch = cp.stdout.decode('ascii').strip()
+                    current_branch = cp.stdout.decode('ascii', errors='ignore').strip()
                     log.dbg(f"in project: {project.name}, current_branch: current_branch")
                     log.inf(f"repo: {project.name}, create tag: {tag_full}")
                     project.git(['tag', '-f', '-a', tag_full, '-m', message],
