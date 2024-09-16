@@ -103,7 +103,28 @@ def get_current_bts(project: manifest.Project):
     bts = "sh"
     log.dbg(f"get_current_bts() - current sha is: {ret}, bts: {bts}")
     return ret, bts
-    
+
+
+def get_remote_branch_tag(project: manifest.Project):
+    '''
+    return string with all remote branches and tags
+    '''
+    log.dbg(f"get_remote_branch_tag() - project name: {project.name}")
+    args = ["heads", "tags"]
+    res_dic = {}
+    # TODO: add 2 results, update code in clone depth and new project
+    for arg in args:
+        cp = project.git(f'ls-remote --{arg} -q', check=False, capture_stdout=True)
+        cp_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+        cp__list = [line.split()[1] for line in cp_lines]
+        res = ', '.join(cp__list)
+        res_dic[arg] = res
+
+    log.dbg(f"get_remote_branch_tag() - the branches of {project.name} are: {res_dic["heads"]}")
+    log.dbg(f"get_remote_branch_tag() - the tags of {project.name} are: {res_dic["tags"]}")
+    return res_dic["heads"], res_dic["tags"]
+
+
 
 # TODO: check with tag and branch
 def check_branch_ahead_remote(project: manifest.Project, branch: Optional[str] = None) -> int:
@@ -276,13 +297,10 @@ def fetch_proj_depth(project: manifest.Project, fetch_depth: str):
     # We need to take only the second word of each line
     
     # Find branches
-    cp = project.git(f'ls-remote --heads -q', check=False, capture_stdout=True)
-    branches_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
-    branches_list = [line.split()[1] for line in branches_lines]
-    branches = ', '.join(branches_list)
+    branches, tags = get_remote_branch_tag(project)
     log.dbg(f"the branches are: {branches}")
-    
-    # Find tags
+    log.dbg(f"the branches are: {tags}")
+
     cp = project.git(f'ls-remote --tags -q', check=False, capture_stdout=True)
     tags_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
     tags_list = [line.split()[1] for line in tags_lines]
