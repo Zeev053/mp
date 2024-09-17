@@ -105,6 +105,47 @@ def get_current_bts(project: manifest.Project):
     return ret, bts
 
 
+def is_tag_branch_commit(project: manifest.Project, rev: str) -> str:
+    """
+    Check if the rev is "br_r", "br", "tg" or "cm", 
+    and return respectively string.
+    Otherwise return None
+    """
+
+    log.dbg(f"is_tag_branch_commit() - project name: {project.name}, rev: {rev}")
+
+    # check if this is remote branch
+    cp = project.git(f"show-ref --verify refs/remotes/origin/{rev}", 
+                     check=False, capture_stdout=True, capture_stderr=True)
+    cp_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    if (len(cp_lines)):
+        return "br_r"
+
+    # first check for local branch
+    cp = project.git(f"show-ref --verify refs/heads/{rev}", 
+                     check=False, capture_stdout=True, capture_stderr=True)
+    cp_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    if (len(cp_lines)):
+        return "br"
+
+    # check if tag
+    cp = project.git(f"show-ref --verify refs/tags/{rev}", 
+                     check=False, capture_stdout=True, capture_stderr=True)
+    cp_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    if (len(cp_lines)):
+        return "tg"
+
+    # check if commit
+    cp = project.git(f"cat-file -t {rev}", 
+                     check=False, capture_stdout=True, capture_stderr=True)
+    cp_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
+    if (len(cp_lines)):
+        return "cm"
+
+
+    return None
+
+
 def get_remote_branch_tag(project: manifest.Project):
     '''
     return string with all remote branches and tags
@@ -733,8 +774,6 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
 
     # local_org_branch = org_branches[BranchType.MAIN.value]
     # remote_org_branch_full = f'origin/{org_branches[BranchType.MAIN.value]}'
-    remote_org_branch_full = f"origin/{origin_branch}"
-    log.dbg(f"remote_origin_branch_full: {remote_org_branch_full}")
 
     # if (org_proj == dest_proj):
     # log.die(f"The name of the origin project and the name of the new project are the same - exit")
@@ -745,6 +784,15 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
         ['branch', '-D', dest_branches[BranchType.DEVELOP.value],
          dest_branches[BranchType.INTEGRATION.value], dest_branches[BranchType.MAIN.value]],
         check=False)
+    
+    # Check type of revision, and update the string of remote branch accordingly
+    remote_org_branch_full = f"origin/{origin_branch}"
+    ver_type = is_tag_branch_commit(self_manifest.projects[0], origin_branch)
+    log.dbg(f"ver_type: {ver_type}")
+    if(ver_type == "tg" or ver_type == "cm"):
+        remote_org_branch_full = origin_branch
+
+    log.dbg(f"remote_origin_branch_full: {remote_org_branch_full}")
 
     west_str = self_manifest.projects[0].read_at("west.yml", remote_org_branch_full).decode('utf-8')
     log.dbg(f'west_str from branch {remote_org_branch_full}:\n{west_str}')
@@ -2367,10 +2415,10 @@ class MpvTemp(WestCommand):
         # manifest_proj = self.manifest.get_projects(['manifest'])[0]
         # branches = mpv_branches(manifest_proj)
         # log.dbg(f"branches: {branches}\n\n")
-        
+
         for proj in self.manifest.projects:
-            ret, bts = get_current_bts(proj)
-            log.inf(f"ret of {proj.name}: {ret}, bts: {bts}")
+            ret = is_tag_branch_commit(proj, "3dc28f85f8b6d80f945114af62759e08b5d1a757")
+            log.inf(f"ret of {proj.name}: {ret}")
         return 
         
         # git branch  --format="%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)"
