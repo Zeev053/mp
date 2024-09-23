@@ -724,7 +724,30 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
     assert "develop" in proj_common_repo_status
 
 
+#################################################
 
+
+def test_mpv_new_proj_tag(mpv_new_proj_tmpdir):
+    print("\n\n\n\n--------------------------------")
+    print(f"test_mpv_new_proj_tag: {mpv_new_proj_tmpdir}")
+
+    print("Call mpv-update to dummy_d__1.0.0_dev")
+    cmd('mpv-update --full-clone --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+
+    full_tag = "mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj"
+    print(f"test_mpv_new_proj_tag() - Create the tag: {full_tag}")
+    cmd('mpv-tag -m "tag from test_mpv_tag in branch dummy_d__1.0.0_dev" mpv_test_new_proj', cwd=str(mpv_update_tmpdir))
+
+    print("Call mpv-update to mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj")
+    cmd('mpv-update --full-clone --mr mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj', cwd=str(mpv_new_proj_tmpdir))
+
+    # Validate that the type of the project is data in mpv.yml
+    # validate that all repos have tag in the revision, 
+    # except to external1 with tag_1 in the revision 
+
+
+
+###################################################
 
 
 
