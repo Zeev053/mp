@@ -736,10 +736,92 @@ def test_mpv_new_proj_tag(mpv_new_proj_tmpdir):
 
     full_tag = "mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj"
     print(f"test_mpv_new_proj_tag() - Create the tag: {full_tag}")
-    cmd('mpv-tag -m "tag from test_mpv_tag in branch dummy_d__1.0.0_dev" mpv_test_new_proj', cwd=str(mpv_update_tmpdir))
+    cmd('mpv-tag -m "tag from test_mpv_tag in branch dummy_d__1.0.0_dev" mpv_test_new_proj', cwd=str(mpv_new_proj_tmpdir))
 
     print("Call mpv-update to mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj")
     cmd('mpv-update --full-clone --mr mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj', cwd=str(mpv_new_proj_tmpdir))
+
+    # Validate that the type of the repo is DATA
+    print("Validate that the type of the repo is DATA:")
+    with open('mpv-test-git-manager/mpv.yml', 'r') as file:
+        mpv_yaml = yaml.safe_load(file)
+    assert mpv_yaml['manifest']['self']['merge-method'] == 'DATA'
+
+    # Type of all the repositories
+    repo_data_src_all = ['MODULE1/module1-src', 'MODULE1/module1-data', 
+                     'MODULE2/module2-src', 'MODULE2/module2-data',
+                     'PROJECTS_COMMON/proj_common']
+    repo_external = ['EXTERNAL/external1']
+
+    # Validate that all revision are as full_tag variable,
+    # and the sha of the tag is as the sha of the revision in west.yml in 
+    # branch dummy_d__1.0.0_dev.
+    print("Validate that all revision are as full_tag variable:")
+    git_manager_apath = mpv_new_proj_tmpdir.joinpath("mpv-test-git-manager")
+
+    source_file = git_manager_apath.joinpath("west.yml")
+    west_data = source_file.read_text()
+    west_data = yaml.safe_load(west_data)
+
+    for repo in repo_data_src_all:
+        # Find the entry of our repo in west.yml
+        i = 0
+        for repo_data in west_data['manifest']['projects']:
+            if repo_data['path'] == repo:
+                print(f"Find repo in i={i}, repo name: {repo_data['name']}")
+                break
+            i = i+1
+        revision = west_data['manifest']['projects'][i]['revision']
+        repo_name = west_data['manifest']['projects'][i]['name']
+        print(f"the revision of repo: {repo_name} is: {revision}")
+
+    #     repo_path = mpv_new_proj_tmpdir.joinpath(rep)
+    #     print(f"path of repo is {repo_path}") 
+    #     cmd()
+    #     rev_proj_100 = rev_parse(repo_path, 'remotes/origin/proj_1__1.0.0_dev')
+    #     print(f"rev_proj_100 of {'remotes/origin/proj_1__1.0.0_dev'} is {rev_proj_100}")
+
+    #     # Validate the revision from remote is the for all branches
+    #     for sub in sub_branch:
+    #         assert rev_proj_100 == rev_parse(repo_path, sub)
+    #         assert rev_proj_100 == rev_parse(repo_path, 'remotes/origin/' + sub)
+
+    # # Validate that source repos don't have new branches, 
+    # # but only sha as origin branch - proj_1__1.0.0_dev
+    # print("Check repos of source for dummy_d__1.0.0 project:")
+    # for rep in repo_src:
+    #     # Validate the repo is in "detached HEAD"
+    #     repo_path = mpv_new_proj_tmpdir.joinpath(rep)
+    #     print(f"path of repo is {repo_path}") 
+    #     repo_status = check_output(['git', 'status', '-bz'], cwd=repo_path)
+    #     repo_status_expected = "## HEAD (no branch)"
+    #     assert repo_status.strip("\x00") == repo_status_expected
+        
+    #     # Validate that the revision of current working tree is save as proj_1__1.0.0_dev
+    #     rev_proj_100 = rev_parse(repo_path, 'remotes/origin/proj_1__1.0.0_dev')
+    #     rev_HEAD = rev_parse(repo_path, 'HEAD')
+    #     assert rev_proj_100 == rev_HEAD
+
+    #     # Validate that the repo doesn't have branches of dummy_d
+    #     repo_branch = check_output(['git', 'branch', '-a'], cwd=repo_path)
+    #     assert "dummy_d" not in repo_branch
+        
+
+
+    # # Validate that the revision of repositories of type external is the same tag as exist in west.yml of main branch
+    # print(f"Validate external repos {repo_path}") 
+    # external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'], cwd=mpv_new_proj_tmpdir)
+    # # nested_modules_revision = check_output(['west', 'list', '-f "{revision}"', 'nested-modules-git-manager'], cwd=mpv_new_proj_tmpdir)
+
+    # external1_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/external1'))
+    # # nested_modules_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/NESTED/nested-modules-git-manager'))
+    # assert external1_revision.strip(' "\n\r') == external1_tag.strip(' "\n\r')
+    # # assert nested_modules_revision.strip(' "\n\r') == nested_modules_tag.strip(' "\n\r')
+
+    # proj_common_repo_status = check_output(['git', 'status', '-bz'], cwd=mpv_new_proj_tmpdir.joinpath('PROJECTS_COMMON/proj_common'))
+    # assert "develop" in proj_common_repo_status
+
+
 
     # Validate that the type of the project is data in mpv.yml
     # validate that all repos have tag in the revision, 
