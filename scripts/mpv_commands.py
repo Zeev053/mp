@@ -18,10 +18,12 @@ from west.commands import WestCommand
 from west import manifest
 from west.manifest import ManifestDataType
 from west.manifest import ImportFlag
+from west.manifest import manifest_path
 from west.configuration import update_config
 from west import util
 from west.util import PathType
 from west.app.main import WestArgumentParser
+from west.app.main import WestApp
 
 # from west.app.project import ForAll, Update
 from west.app.project import Update
@@ -421,16 +423,20 @@ def update_filter_manifest(man: manifest.Manifest):
 
 # Call to update command from west project
 def buildin_update_command(topdir, manifest, projects_str: list = []):
-    update_cmnd = Update()
-    parser = WestArgumentParser(
-        prog='west', description='dummy parser to update command', add_help=False)
-    parser.add_argument('-v', '--verbose', default=0, action='count')
-    subparser_gen = parser.add_subparsers(metavar='<command>',dest='command')
-    update_cmnd.add_parser(subparser_gen)
-    argument = ['update', '-n'] + projects_str
-    update_args, unknown = parser.parse_known_args(argument)
+    app = WestApp()
     log.inf(f"Call west update command for projects: {projects_str} - ")
-    update_cmnd.run(update_args, unknown, topdir, manifest)
+    app.run(['-v','update', '-n'] + projects_str)
+
+    # update_cmnd = Update()
+    # parser = WestArgumentParser(
+    #     prog='west', description='dummy parser to update command', add_help=False)
+    # parser.add_argument('-v', '--verbose', default=0, action='count')
+    # subparser_gen = parser.add_subparsers(metavar='<command>',dest='command')
+    # update_cmnd.add_parser(subparser_gen)
+    # argument = ['update', '-n'] + projects_str
+    # update_args, unknown = parser.parse_known_args(argument)
+    # log.inf(f"Call west update command for projects: {projects_str} - ")
+    # update_cmnd.run(update_args, unknown, topdir, manifest)
 
 
 class _SelfMpv:
@@ -464,13 +470,19 @@ class ManifestMpv:
 
     @staticmethod
     def from_file(**kwargs) -> 'ManifestMpv':
-        topdir = kwargs.get('topdir')
+        # topdir = kwargs.get('topdir')
 
         # neither source_file nor topdir: search the filesystem
         # for the workspace and use its manifest.path.
-        topdir = util.west_topdir()
-        (mpath, mname) = manifest._mpath(topdir=topdir)
+        # topdir = util.west_topdir()
+        # (mpath, mname) = manifest._mpath(topdir=topdir)
+
+        start = Path.cwd()
+        fall_back = True        
+        topdir = Path(util.west_topdir(start=start,
+                                       fall_back=fall_back)).resolve()
         mname = "mpv.yml"
+        mpath = Path(manifest_path()).parent
         kwargs.update({
             'topdir': topdir,
             'source_file': os.path.join(topdir, mpath, mname),
@@ -797,10 +809,10 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
     west_str = self_manifest.projects[0].read_at("west.yml", remote_org_branch_full).decode('utf-8')
     log.dbg(f'west_str from branch {remote_org_branch_full}:\n{west_str}')
 
-    origin_manifest = manifest.Manifest.from_data(west_str, topdir=self_manifest.topdir)
-    dev_manifest = manifest.Manifest.from_data(west_str, topdir=self_manifest.topdir)
-    integ_manifest = manifest.Manifest.from_data(west_str, topdir=self_manifest.topdir)
-    main_manifest = manifest.Manifest.from_data(west_str, topdir=self_manifest.topdir)
+    origin_manifest = manifest.Manifest.from_data(west_str)
+    dev_manifest = manifest.Manifest.from_data(west_str)
+    integ_manifest = manifest.Manifest.from_data(west_str)
+    main_manifest = manifest.Manifest.from_data(west_str)
 
     # Create new branches in all relevant repositories.
     i = 0
@@ -1252,7 +1264,7 @@ class MpvMerge(WestCommand):
 
         log.dbg(f'get west.yml from destination branch: {args.branch_to}')
         local_dest_west_str = manifest_proj.read_at("west.yml", args.branch_to).decode('utf-8')
-        dest_manifest = manifest.Manifest.from_data(local_dest_west_str, topdir=self.manifest.topdir)
+        dest_manifest = manifest.Manifest.from_data(local_dest_west_str)
         log.dbg(f"dest_manifest BEFORE changes: \n{dest_manifest.as_yaml()}\n")
 
         log.dbg(f'get mpv.yml from parent branch: {remote_branch_from}')
@@ -1262,7 +1274,7 @@ class MpvMerge(WestCommand):
 
         log.dbg(f'get west.yml from parent branch: {remote_branch_from}')
         remote_org_west_str = manifest_proj.read_at("west.yml", remote_branch_from).decode('utf-8')
-        org_manifest = manifest.Manifest.from_data(remote_org_west_str, topdir=self.manifest.topdir)
+        org_manifest = manifest.Manifest.from_data(remote_org_west_str)
         log.dbg(f'org_manifest: \n{org_manifest.as_yaml()}\n')
 
         org_merge_method: MergeType = org_mpv_manifest.self_mpv.merge_method
@@ -1592,7 +1604,8 @@ class MpvTag(WestCommand):
         message = ""
         if args.message == None or len(args.message) == 0:
             message = "NO USER MESSAGE"
-        message = f"Create by mpv-tag command \nUser message: " + message
+        else:
+            message = f"Create by mpv-tag command \nUser message: " + args.message
         log.dbg(f"tag message: {message}")
 
         # manifest_proj = self.manifest.get_projects(['manifest'])[0]
@@ -1839,7 +1852,7 @@ class MpvManifest(WestCommand):
         new_west_filename = manifes_folder.joinpath("west.yml")
         log.dbg(f'get west.yml from file: {new_west_filename}')
         new_west_str = new_west_filename.read_text()
-        new_west_manifest = manifest.Manifest.from_data(new_west_str, topdir=self.manifest.topdir, import_flags=ImportFlag.IGNORE)
+        new_west_manifest = manifest.Manifest.from_data(new_west_str, import_flags=ImportFlag.IGNORE)
         log.dbg(f"new_west_manifest:\n{new_west_manifest.as_yaml()}")
         # log.dbg(f"new_west_manifest from file {new_west_filename}: \n{new_west_manifest.as_yaml()}\n")
         new_west_projects_set = project_set_4_compare(new_west_manifest)
@@ -1874,7 +1887,7 @@ class MpvManifest(WestCommand):
         # 1.4 Get current west
         log.dbg(f'get west.yml from default_branch: origin/{default_branch}')
         current_west_str = manifest_proj.read_at("west.yml", f"origin/{default_branch}").decode('utf-8')
-        current_west_manifest = manifest.Manifest.from_data(current_west_str, topdir=self.manifest.topdir, import_flags=ImportFlag.IGNORE)
+        current_west_manifest = manifest.Manifest.from_data(current_west_str, import_flags=ImportFlag.IGNORE)
         # log.dbg(f"current_west_manifest from branch {default_branch}: \n{current_west_manifest.as_yaml()}")
         current_west_projects_set = project_set_4_compare(current_west_manifest)
         log.dbg(f"current_west_projects_set: {current_west_projects_set}\n")
@@ -2077,7 +2090,7 @@ class MpvManifest(WestCommand):
 
             log.dbg(f"Load west.yml current branch: {branch}.")
             current_branch_west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
-            current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, topdir=self.manifest.topdir, import_flags=ImportFlag.IGNORE)
+            current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, import_flags=ImportFlag.IGNORE)
 
             log.dbg(f"Load mpv.yml current branch: {branch}.")
             current_branch_mpv_str = manifest_proj.read_at("mpv.yml", "HEAD").decode('utf-8')
@@ -2415,6 +2428,12 @@ class MpvTemp(WestCommand):
         # manifest_proj = self.manifest.get_projects(['manifest'])[0]
         # branches = mpv_branches(manifest_proj)
         # log.dbg(f"branches: {branches}\n\n")
+
+        app = WestApp()
+        app.run(['-v','update'])
+        return
+    
+
 
         for proj in self.manifest.projects:
             ret = is_tag_branch_commit(proj, "3dc28f85f8b6d80f945114af62759e08b5d1a757")

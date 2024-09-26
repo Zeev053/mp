@@ -622,6 +622,7 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
     ################ Test dummy_s__1.0.0 ############################
     print("The fixture mpv_new_proj_tmpdir finish with create dummy_s 1.0.0 - check it first")
     # Validate that the type of the project is data in mpv.yml
+    print("Validate that the type of the repo is SOURCE_DATA:")
     with open('mpv-test-git-manager/mpv.yml', 'r') as file:
         mpv_yaml = yaml.safe_load(file)
     assert mpv_yaml['manifest']['self']['merge-method'] == 'SOURCE_DATA'
@@ -724,8 +725,140 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
     assert "develop" in proj_common_repo_status
 
 
+def test_mpv_new_proj_tag(mpv_new_proj_tmpdir):
+    print("\n\n\n\n--------------------------------")
+    print(f"test_mpv_new_proj_tag: {mpv_new_proj_tmpdir}")
+
+    git_manager_apath = mpv_new_proj_tmpdir.joinpath("mpv-test-git-manager")
+
+    print("Call mpv-update to dummy_d__1.0.0_dev")
+    cmd('mpv-update --full-clone --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+
+    full_tag = "mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj"
+    print(f"test_mpv_new_proj_tag() - Create the tag: {full_tag}")
+    cmd('mpv-tag -m "tag from test_mpv_tag in branch dummy_d__1.0.0_dev" mpv_test_new_proj', cwd=str(mpv_new_proj_tmpdir))
+
+    print("Call mpv-update to mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj")
+    cmd(f'mpv-update --full-clone --mr {full_tag}', cwd=str(mpv_new_proj_tmpdir))
+
+    ################ Test tag_d 1.0.0 ############################
+
+    print("Create new project tag_d 1.0.0 from the tag {full_tag}")
+    cmd(f'mpv-new-proj {full_tag} tag_d 1.0.0', cwd=str(mpv_new_proj_tmpdir))
+    print("Call mpv-update to tag_d 1.0.0")
+    cmd('mpv-update --full-clone --mr tag_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+
+    # Validate that the type of the repo is DATA
+    print("Validate that the type of the repo is DATA:")
+    with open('mpv-test-git-manager/mpv.yml', 'r') as file:
+        mpv_yaml = yaml.safe_load(file)
+    assert mpv_yaml['manifest']['self']['merge-method'] == 'DATA'
+
+    # all the repositories and the branches
+    repo_data = ['MODULE1/module1-data', 'MODULE2/module2-data']
+    repo_src = ['MODULE1/module1-src', 'MODULE2/module2-src']
+    sub_branch_data = ['tag_d__1.0.0_dev', 'tag_d__1.0.0_integ', 'tag_d__1.0.0_main']
+
+    # Validate that all new branches in data repos are in the sha, and it equals to sha of main branch
+    print("Check new branches of tag_d__1.0.0 in data repos:")
+    for rep in repo_data:
+        # Get revision of remote branch dev 
+        repo_path = mpv_new_proj_tmpdir.joinpath(rep)
+        print(f"path of repo is {repo_path}") 
+        # Use ^{commit} - to dereference to the commit SHA (and not the tag SHA)
+        rev_proj_100 = rev_parse(repo_path, f'tags/{full_tag}^{{commit}}')
+        print(f"rev_proj_100 of tags/{full_tag} is {rev_proj_100}")
+
+        # Validate the revision from remote is the for all branches
+        for sub in sub_branch_data:
+            assert rev_proj_100 == rev_parse(repo_path, sub)
+            assert rev_proj_100 == rev_parse(repo_path, 'remotes/origin/' + sub)
+
+    # Validate that source repos don't have new branches, 
+    # but only sha as origin tag: mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj
+    print("Check repos of source for tag_d__1.0.0 project:")
+    for rep in repo_src:
+        # Validate the repo is in "detached HEAD"
+        repo_path = mpv_new_proj_tmpdir.joinpath(rep)
+        print(f"path of repo is {repo_path}") 
+        repo_status = check_output(['git', 'status', '-bz'], cwd=repo_path)
+        repo_status_expected = "## HEAD (no branch)"
+        assert repo_status.strip("\x00") == repo_status_expected
+        
+        # Validate that the revision of current working tree is save as mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj
+        rev_proj_100 = rev_parse(repo_path, f'tags/{full_tag}^{{commit}}')
+        rev_HEAD = rev_parse(repo_path, 'HEAD')
+        assert rev_proj_100 == rev_HEAD
+
+        # Validate that the repo doesn't have branches of dummy_d
+        repo_branch = check_output(['git', 'branch', '-a'], cwd=repo_path)
+        assert "tag_d__1.0.0" not in repo_branch
+
+    # Validate that the revision of repositories of type external is the same tag as exist in west.yml of main branch
+    print(f"Validate external repos {repo_path}") 
+    external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'], cwd=mpv_new_proj_tmpdir)
+    # nested_modules_revision = check_output(['west', 'list', '-f "{revision}"', 'nested-modules-git-manager'], cwd=mpv_new_proj_tmpdir)
+
+    external1_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/external1'))
+    # nested_modules_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/NESTED/nested-modules-git-manager'))
+    assert external1_revision.strip(' "\n\r') == external1_tag.strip(' "\n\r')
+    assert external1_revision.strip(' "\n\r') == "tag_1"
+    # assert nested_modules_revision.strip(' "\n\r') == nested_modules_tag.strip(' "\n\r')
+
+    # proj common should be in original tag (mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj), 
+    # because the original status should not be changed
+    proj_common_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('PROJECTS_COMMON/proj_common'))
+    proj_common_revision = check_output(['west', 'list', '-f "{revision}"', 'proj_common'], cwd=mpv_new_proj_tmpdir)
+    assert proj_common_tag.strip(' "\n\r') == proj_common_revision.strip(' "\n\r')
+    assert proj_common_revision.strip(' "\n\r') == full_tag
 
 
+    ################ Test tag_s 1.0.0 ############################
+
+    print("Create new project tag_s 1.0.0 from the tag {full_tag}")
+    cmd(f'mpv-new-proj -t s {full_tag} tag_s 1.0.0', cwd=str(mpv_new_proj_tmpdir))
+    print("Call mpv-update to tag_s 1.0.0")
+    cmd('mpv-update --full-clone --mr tag_s__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+
+    print("Validate that the type of the repo is SOURCE_DATA:")
+    with open('mpv-test-git-manager/mpv.yml', 'r') as file:
+        mpv_yaml = yaml.safe_load(file)
+    assert mpv_yaml['manifest']['self']['merge-method'] == 'SOURCE_DATA'
+
+    # all the repositories and the branches
+    repo = ['MODULE1/module1-src', 'MODULE1/module1-data', 'MODULE2/module2-src',
+            'MODULE2/module2-data']
+    sub_branch = ['tag_s__1.0.0_dev', 'tag_s__1.0.0_integ', 'tag_s__1.0.0_main']
+
+    print("Check new branches of tag_s__1.0.0:")
+    for rep in repo:
+        # Get revision of remote branch dev 
+        repo_path = mpv_new_proj_tmpdir.joinpath(rep)
+        print(f"path of repo is {repo_path}") 
+        rev_proj_100 = rev_parse(repo_path, f'tags/{full_tag}^{{commit}}')
+        print(f"rev_proj_100 of tags/{full_tag} is {rev_proj_100}")
+
+        # Validate the revision from remote is the for all branches
+        for sub in sub_branch:
+            assert rev_proj_100 == rev_parse(repo_path, sub) 
+            assert rev_proj_100 == rev_parse(repo_path, 'remotes/origin/' + sub)
+
+    # Validate that the revision of repositories of type external is the same tag as exist in west.yml of main branch
+    print(f"Validate external repos {repo_path}") 
+    external1_revision = check_output(['west', 'list', '-f "{revision}"', 'external1'], cwd=mpv_new_proj_tmpdir)
+
+    external1_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/external1'))
+    # nested_modules_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('EXTERNAL/NESTED/nested-modules-git-manager'))
+    assert external1_revision.strip(' "\n\r') == external1_tag.strip(' "\n\r')
+    assert external1_revision.strip(' "\n\r') == "tag_1"
+    # assert nested_modules_revision.strip(' "\n\r') == nested_modules_tag.strip(' "\n\r')
+
+    # proj common should be in original tag (mpv-tag_br-dummy_d__1.0.0_dev__mpv_test_new_proj), 
+    # because the original status should not be changed
+    proj_common_tag = check_output(['git', 'describe'], cwd=mpv_new_proj_tmpdir.joinpath('PROJECTS_COMMON/proj_common'))
+    proj_common_revision = check_output(['west', 'list', '-f "{revision}"', 'proj_common'], cwd=mpv_new_proj_tmpdir)
+    assert proj_common_tag.strip(' "\n\r') == proj_common_revision.strip(' "\n\r')
+    assert proj_common_revision.strip(' "\n\r') == full_tag
 
 
 
