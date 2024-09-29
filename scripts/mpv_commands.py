@@ -163,8 +163,8 @@ def get_remote_branch_tag(project: manifest.Project):
         res = ', '.join(cp__list)
         res_dic[arg] = res
 
-    log.dbg(f"get_remote_branch_tag() - the branches of {project.name} are: {res_dic["heads"]}")
-    log.dbg(f"get_remote_branch_tag() - the tags of {project.name} are: {res_dic["tags"]}")
+    log.dbg(f'get_remote_branch_tag() - the branches of {project.name} are: {res_dic["heads"]}')
+    log.dbg(f'get_remote_branch_tag() - the tags of {project.name} are: {res_dic["tags"]}')
     return res_dic["heads"], res_dic["tags"]
 
 
