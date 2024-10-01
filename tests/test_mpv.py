@@ -914,8 +914,8 @@ def validate_merge(base_path, merge_data: bool):
     # The output of git status -s return string like:
     # AA src1_conflict.cpp
     # The first 2 chars can be one of: D or A or U.
-    # So, build regular expression for confliect string that say:
-    # The characters D or A or U ("[DAU]") must be in the first element to secone element of the string ("{2}"):
+    # So, build regular expression for conflict string that say:
+    # The characters D or A or U ("[DAU]") must be in the first element to second element of the string ("{2}"):
     p = re.compile("[DAU]{2}")
     
     print("")
@@ -1250,4 +1250,11 @@ def test_mpv_tag(mpv_update_tmpdir):
     sha_current = rev_parse(proj_common_apath, 'HEAD')
     assert sha_prev == sha_current
 
+
+def test_mpv_manifest(mpv_init_tmpdir):
+    print("\n\n\n\n--------------------------------")
+    print("test_mpv_manifest()")
+
+    print("Call mpv-manifest")
+    cmd('mpv-manifest -a module2-data clone-depth 1', cwd=str(mpv_init_tmpdir))
 

@@ -1756,6 +1756,7 @@ class MpvInit(WestCommand):
 
         return parser
 
+
     def do_run(self, args, _):
         # 1. Update all repositories (west mpv-update)
         log.banner("1. Call to mpv-update")
@@ -1797,23 +1798,33 @@ class MpvManifest(WestCommand):
     def __init__(self):
         super().__init__(
             'mpv-manifest',
-            'Update the manifest (west.yml) with new one',
+            'Update the manifest (west.yml)',
             textwrap.dedent('''Update the manifest (west.yml and mpv.yml).
-            The command receive a new folder with update west.yml and mpv.yml,
-            and compare the current manifest files with the new ones.
-            All changes between the old and new manifests are update.
-            
-            NOTICE: The current manifests are taken from ***default branch*** (usually main or master).
-            
-            The command assume that the origin/main branch is update 
-            with the current west.yml and mpv.yml .
-            
-            Example:
-            To update the manifests with new files exist in folder C:\\temp\\mpv-test-git-manager\\temp WITH DRY RUN:
-            west -v mpv-manifest --dr "C:\\temp\\mpv-test-git-manager\\temp"
+            The command receive can update the manifest in 2 ways: 
+            1. Receive a new folder with update west.yml and mpv.yml,
+                and compare the current manifest files with the new ones.
+                All changes between the old and new manifests are update.
 
-            To update the manifests with new files exist in folder C:\\temp\\mpv-test-git-manager\\temp:
-            west -v mpv-manifest "C:\\temp\\mpv-test-git-manager\\temp"
+                **NOTICE**: The current manifests are taken from ***default branch*** (usually main or master).
+                
+                The command assume that the default branch is update 
+                with the current west.yml and mpv.yml.
+            
+                Example:
+                To update the manifests with new files exist in folder C:\\temp\\mpv-test-git-manager\\temp WITH DRY RUN:
+                west -v mpv-manifest --dr -f "C:\\temp\\mpv-test-git-manager\\temp"
+
+                To update the manifests with new files exist in folder C:\\temp\\mpv-test-git-manager\\temp:
+                west -v mpv-manifest -f "C:\\temp\\mpv-test-git-manager\\temp"
+
+            2.  Receive a list of fields to be added or update.
+
+                Example:
+                To update the manifests with new fields: clone-depth 1 to all EXTERNAL repos WITH DRY RUN:
+                west -v mpv-manifest --dr -a repo-a clone-depth 1
+
+                To update the manifests with new fields: clone-depth 1 to all EXTERNAL repos:
+                west -v mpv-manifest -a repo-a clone-depth 1
             ''')
         )
 
@@ -1827,29 +1838,130 @@ class MpvManifest(WestCommand):
         # Remember to update west-completion.bash if you add or remove
         # flags
         parser.add_argument('--dr', '--dry-run', action='store_true',
-                            help='''Semmary what is going to add,
-                            and what is going to be delete from the workspace''')
+                            help='''Dry run without actually make change''')
 
-        parser.add_argument(
-            'manifes_folder',
-            help='''Folder with new manifest files (west.yml and mpv.yml).''')
+        parser.add_argument('-f', '--manifest_folder', action='store_true',
+                            help='''Folder with new west.yml and mpv.yml files.''')
+
+        parser.add_argument('-a', '--add', action='append', default=[], nargs=3,
+                            metavar=('REPO_NAME_OR_TYPE', 'FIELD_NAME', 'FIELD_VALUE'),
+                            help='''Add fields to the manifest
+                                    First argument of the flag is the repo name or type of repos (type is: 'DATA', 'SOURCE', 'EXTERNAL', 'ALL_PROJECTS'),
+                                    Second argument of the flag is the field name to be added.
+                                    The second field is the value of the field.
+                                    ''')
 
         return parser
 
 
 
     def do_run(self, args, unknown):
-        log.banner(f'Update manifest from {args.manifes_folder}')
+        log.banner(f'Update manifest from {args.manifest_folder}')
         log.dbg(f"args: {args}")
 
         # TODO: Call fetch --prune for all projects to remove deleted remote branches
-        
 
+        # 1. check if manifest_folder exists
+        if args.manifest_folder:
+            self.update_manifest_from_folder(args)
+        elif args.add:
+            self.add_fields_to_manifest(args)
+
+    def add_fields_to_manifest(self, args):
+        """
+        Add Fields to the manifest
+        """
+        if len(args.add) <= 0:
+            log.die("No fields to add. Please specify fields using -a flag.")
+
+        # Get the mpv branches
+        manifest_proj: manifest.Manifest = self.manifest.get_projects(['manifest'])[0]
+        current_manifest_branches = mpv_branches(manifest_proj)
+        log.dbg(f"current_manifest_branches: {current_manifest_branches}")
+        
+        for branch in current_manifest_branches:
+            branch = os.path.basename(branch)
+            log.dbg(f"After remove origin from branch name branch is: {branch}.")
+            log.dbg(f"Checkout manifest to branch: {branch}.")
+            manifest_proj.git(['checkout', branch, "--"])
+            manifest_proj.git(['pull'])
+
+            log.dbg(f"Load west.yml current branch: {branch}.")
+            current_branch_west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
+            current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, import_flags=ImportFlag.IGNORE)
+
+            projects_list = current_branch_west_manifest.projects
+
+            # Start iterate after the manifest repo
+            i = 1
+            while i < len(projects_list):
+                proj = projects_list[i]
+                proj_dic = proj.as_dict()
+
+                project_change: bool = False
+                for repo_field_list in args.add:
+                    repo_name = repo_field_list[0]
+                    if repo_name == proj.name:
+                        project_change = True
+                        field_name = repo_field_list[1]
+                        field_value = repo_field_list[2]
+                        proj_dic[field_name] = field_value
+                        log.dbg(f"Update field {field_name} in {proj.name} to {field_value}.")
+                if project_change == True:
+                    log.dbg(f"Update project {proj.name} in branch: {branch}.")
+
+                    new_proj = manifest.Project(proj.name, proj.url, 
+                        description=proj_dic.get('description'),
+                        revision=proj_dic.get('revision'),
+                        path=proj_dic.get('path'),
+                        submodules=proj_dic.get('submodules'),
+                        clone_depth=proj_dic.get('clone-depth'),
+                        west_commands=proj_dic.get('west-commands'),
+                        topdir=proj_dic.get('topdir'),
+                        remote_name=proj_dic.get('remote'),
+                        groups=proj_dic.get('groups'),
+                        userdata=proj_dic.get('userdata'))
+
+                    projects_list[i] = new_proj
+                
+                i = i+1
+            
+            log.inf(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
+
+            if args.dr == False:
+                log.dbg(f"----------------------------------------")
+                west_file = self.manifest.path
+                log.dbg(f"west_file: {west_file}. branch: {branch}")
+                west_file_fd = open(west_file, "r+")
+                log.dbg(f"west_file BEFORE change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                # log.inf(f"update west.yml, branch: {branch} yaml: \n {manifest_obj.as_yaml()}\n")
+                west_file_fd.seek(0)
+                west_file_fd.truncate()
+                west_file_fd.write(current_branch_west_manifest.as_yaml())
+                west_file_fd.seek(0)
+                log.dbg(f"west_file AFTER change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                west_file_fd.close()
+
+                manifest_proj.git(['add','west.yml'],
+                                  check=False)
+                manifest_proj.git(['commit', '-m',
+                                   f'In mpv-manifest - Update from {args.manifest_folder}. Automatic update by running the command'], check=False)
+                manifest_proj.git(['push', 'origin', f"{branch}"], check=False)
+
+            else:
+                log.inf(f"Dry run: in branch {branch}, the west.yml and mpv.yml should be commit and push")
+
+
+            log.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
+
+
+
+    def update_manifest_from_folder(self, args):
         # 1. Read the new manifests and the old manifests (validate that is OK)
-        manifes_folder = Path(args.manifes_folder)
+        manifest_folder = Path(args.manifest_folder)
 
         # 1.1 Get new west
-        new_west_filename = manifes_folder.joinpath("west.yml")
+        new_west_filename = manifest_folder.joinpath("west.yml")
         log.dbg(f'get west.yml from file: {new_west_filename}')
         new_west_str = new_west_filename.read_text()
         new_west_manifest = manifest.Manifest.from_data(new_west_str, import_flags=ImportFlag.IGNORE)
@@ -1861,7 +1973,7 @@ class MpvManifest(WestCommand):
         log.dbg(f"new_projects_names_in_west: {new_projects_names_in_west}\n")
 
         # 1.2 Get new mpv
-        new_mpv_filename = manifes_folder.joinpath("mpv.yml")
+        new_mpv_filename = manifest_folder.joinpath("mpv.yml")
         log.dbg(f'get mpv.yml from file: {new_mpv_filename}')
         new_mpv_str = new_mpv_filename.read_text()
         new_mpv_manifest = ManifestMpv.from_data(new_mpv_str, topdir=self.manifest.topdir)
@@ -2068,7 +2180,7 @@ class MpvManifest(WestCommand):
             manifest_proj.git(['push', 'origin', f"{default_branch}"])
             log.dbg(f"Finish commit")
         else:
-            log.inf(f"Dry run: branch {default_branch} should be updated with west.yml and mpv.yml from {manifes_folder}\n")
+            log.inf(f"Dry run: branch {default_branch} should be updated with west.yml and mpv.yml from {manifest_folder}\n")
 
         # 4.2 Update west.yml and mpv.yml in all mpv branches
         log.dbg(f"\n\nAll actions are: {actions}")
@@ -2390,7 +2502,7 @@ class MpvManifest(WestCommand):
                 manifest_proj.git(['add', 'mpv.yml', 'west.yml'],
                                   check=False)
                 manifest_proj.git(['commit', '-m',
-                                   f'In mpv-manifest - Update from {args.manifes_folder}. Automatic update by running the command'], check=False)
+                                   f'In mpv-manifest - Update from {args.manifest_folder}. Automatic update by running the command'], check=False)
                 manifest_proj.git(['push', 'origin', f"{branch}"], check=False)
 
 
@@ -2400,6 +2512,7 @@ class MpvManifest(WestCommand):
 
             log.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
 
+        
 
 
 #################################################################
