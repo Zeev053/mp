@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 import os
 from pathlib import Path
 import shutil
+import pykwalify.core
 
 from west import log
 from west.commands import WestCommand
@@ -424,8 +425,14 @@ def update_filter_manifest(man: manifest.Manifest):
 # Call to update command from west project
 def buildin_update_command(topdir, manifest, projects_str: list = []):
     app = WestApp()
-    log.inf(f"Call west update command for projects: {projects_str} - ")
-    app.run(['-v','update', '-n'] + projects_str)
+
+    command_list = ['-v','update', '-n'] + projects_str
+    if log.VERBOSE < log.VERBOSE_NORMAL:
+        command_list.remove('-v')
+
+    log.dbg(f"buildin_update_command() - command_list: {command_list}")
+    log.inf(f"buildin_update_command() - Call west update command for projects: {projects_str} - ")
+    app.run(command_list)
 
     # update_cmnd = Update()
     # parser = WestArgumentParser(
@@ -1856,7 +1863,7 @@ class MpvManifest(WestCommand):
 
 
     def do_run(self, args, unknown):
-        log.banner(f'Update manifest from {args.manifest_folder}')
+        log.banner(f'Update manifest')
         log.dbg(f"args: {args}")
 
         # TODO: Call fetch --prune for all projects to remove deleted remote branches
@@ -1876,10 +1883,18 @@ class MpvManifest(WestCommand):
 
         # Get the mpv branches
         manifest_proj: manifest.Manifest = self.manifest.get_projects(['manifest'])[0]
+
+        default_branch = get_remote_default_branch(manifest_proj)
+        log.dbg(f"default_branch: {default_branch}")
+
         current_manifest_branches = mpv_branches(manifest_proj)
         log.dbg(f"current_manifest_branches: {current_manifest_branches}")
+
+        all_branches = current_manifest_branches.copy()
+        all_branches.append(default_branch)
+        log.dbg(f"all_branches: {all_branches}")
         
-        for branch in current_manifest_branches:
+        for branch in all_branches:
             branch = os.path.basename(branch)
             log.dbg(f"After remove origin from branch name branch is: {branch}.")
             log.dbg(f"Checkout manifest to branch: {branch}.")
@@ -1889,6 +1904,7 @@ class MpvManifest(WestCommand):
             log.dbg(f"Load west.yml current branch: {branch}.")
             current_branch_west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
             current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, import_flags=ImportFlag.IGNORE)
+            log.dbg(f"current_branch_west_manifest.as_dict(): \n{current_branch_west_manifest.as_dict()}.")
 
             projects_list = current_branch_west_manifest.projects
 
@@ -1907,15 +1923,22 @@ class MpvManifest(WestCommand):
                         field_value = repo_field_list[2]
                         proj_dic[field_name] = field_value
                         log.dbg(f"Update field {field_name} in {proj.name} to {field_value}.")
-                if project_change == True:
-                    log.dbg(f"Update project {proj.name} in branch: {branch}.")
+                        log.dbg(f"current proj_dic: {proj_dic}")
+                        # TODO: Validate the updated project against the schema
+                        # temp_validation = {'projects' : [proj_dic]}
+                        # log.dbg(f"temp_validation: \n{temp_validation}.")
+                        # pykwalify.core.Core(source_data=temp_validation,
+                        #     schema_files=[manifest._SCHEMA_PATH]).validate()
 
+                if project_change == True:
+                    log.dbg(f"Update manifest repo {proj.name} in branch: {branch}.")
+                    log.dbg(f"The new project is repo is: \n{proj}")
                     new_proj = manifest.Project(proj.name, proj.url, 
                         description=proj_dic.get('description'),
                         revision=proj_dic.get('revision'),
                         path=proj_dic.get('path'),
                         submodules=proj_dic.get('submodules'),
-                        clone_depth=proj_dic.get('clone-depth'),
+                        clone_depth=int(proj_dic.get('clone-depth')),
                         west_commands=proj_dic.get('west-commands'),
                         topdir=proj_dic.get('topdir'),
                         remote_name=proj_dic.get('remote'),
@@ -1923,10 +1946,13 @@ class MpvManifest(WestCommand):
                         userdata=proj_dic.get('userdata'))
 
                     projects_list[i] = new_proj
+                    log.dbg(f"new repo {new_proj.name} in branch: {branch}:\n{new_proj}")
+                    # log.dbg(f"new repo {proj_dic['name']} in branch: {branch}:\n{proj_dic}")
+                    manifest.validate(current_branch_west_manifest.as_dict())
                 
                 i = i+1
             
-            log.inf(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
+            log.dbg(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
 
             if args.dr == False:
                 log.dbg(f"----------------------------------------")

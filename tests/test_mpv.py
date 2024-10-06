@@ -1256,5 +1256,21 @@ def test_mpv_manifest(mpv_init_tmpdir):
     print("test_mpv_manifest()")
 
     print("Call mpv-manifest")
-    cmd('mpv-manifest -a module2-data clone-depth 1', cwd=str(mpv_init_tmpdir))
+    # cmd('mpv-manifest -a module2-data clonee-depth 1', cwd=str(mpv_init_tmpdir))
+    before_command_list = cmd('list -f "{name} {clone_depth}"')
+    cmd('-v mpv-manifest -a module2-data clone-depth 1 -a mpv-git-west-commands clone-depth 1', cwd=str(mpv_init_tmpdir))
+
+    sub_branch = ['main', 'proj_1__1.0.0_dev', 'proj_1__1.0.0_integ', 'proj_1__1.0.0_main']
+
+    for branch in sub_branch:
+        print(f"Checkout to {branch}")
+        manifest_apath = mpv_init_tmpdir.joinpath("mpv-test-git-manager")
+        checkout_branch(manifest_apath, branch)
+
+        after_command_list = cmd('list -f "{name} {clone_depth}"')
+        assert after_command_list != before_command_list
+
+        adapt_before_list = before_command_list.replace("module2-data None", "module2-data 1").replace("mpv-git-west-commands None", "mpv-git-west-commands 1")
+        assert after_command_list == adapt_before_list
+
 
