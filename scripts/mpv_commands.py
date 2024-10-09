@@ -4,7 +4,7 @@ import argparse
 # import re
 # import sys
 import textwrap
-
+import sys
 import re
 import yaml
 import enum
@@ -1035,6 +1035,12 @@ class MpvUpdate(WestCommand):
         if args.depth_1==True and args.full_clone==True:
             log.die("Can not define simultaneously --depth-1 and full-clone")
 
+        in_linux = False
+        if sys.platform == "linux" or sys.platform == "linux2":
+            in_linux = True
+        log.dbg(f"in_linux: {in_linux}")
+
+
         log.banner(f"Update west.yml in manifest repository")
         log.dbg(f"args.manifest_rev: {args.manifest_rev}")
         manifest_proj = self.manifest.get_projects(['manifest'])[0]
@@ -1128,10 +1134,25 @@ class MpvUpdate(WestCommand):
                     fetch_proj_depth(project, 1)
                 else:
                     fetch_proj_depth(project, project.clone_depth)
+
             elif project.name == 'manifest':
+                # TODO: copy if we are in linux
                 log.inf(f"Skipped manifest project")
             else:
                 log.inf(f"Project {project.name} is not active or not cloned")
+
+        for project in self.manifest.projects:
+            if project.name == 'manifest' or project.is_cloned():
+                mod_path = Path(__file__).parent.parent
+                hook_file = mod_path.joinpath("git-hook/commit-msg")
+                project_hook_dir = Path(project.abspath).joinpath(".git/hooks/")
+                log.dbg(f"mod_path: {mod_path}")
+                log.dbg(f"hook_file: {hook_file}")
+                log.dbg(f"project_hook_dir: {project_hook_dir}")
+
+                if in_linux:
+                    shutil.copy(hook_file, project_hook_dir)
+
 
 
 class MpvMerge(WestCommand):

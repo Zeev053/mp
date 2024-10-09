@@ -1,0 +1,26 @@
+#!/usr/bin/bash
+
+echo
+echo mpv add more information to commit message:
+
+branchPath=$(git symbolic-ref -q HEAD) #Somthing like refs/heads/myBranchName
+branchName=${branchPath##*/}      #Get text behind the last / of the branch path
+user=$USER
+hostname=$(hostname)
+[ -f "$file" ]
+in_docker=$?
+
+echo commit file: $1
+echo branchPath: $branchPath
+echo branchName: $branchName
+echo user: $user 
+echo hostname: $hostname
+echo in_docker: $in_docker
+
+
+echo >> $1
+echo Information added by mpv: >> $1
+echo branchName: $branchName >> $1
+echo user: $user >> $1
+echo hostname: $hostname >> $1
+echo in_docker: $in_docker >> $1

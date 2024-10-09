@@ -271,6 +271,7 @@ def _session_repos(tmp_path_factory):
     des_path = Path(rp['mpv-git-west-commands'])
     shutil.copytree(mpv_path.joinpath('scripts'), des_path.joinpath('scripts'))
     shutil.copyfile(mpv_path.joinpath('mpv-commands.yml'), des_path.joinpath('mpv-commands.yml'))
+    shutil.copytree(mpv_path.joinpath('git-hook'), des_path.joinpath('git-hook'))
 
     # commit the copy source_branch in mpv-git-west-commands
     subprocess.check_call(
