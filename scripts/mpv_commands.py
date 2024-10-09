@@ -1955,7 +1955,7 @@ class MpvManifest(WestCommand):
                     log.dbg(f"Update manifest repo {proj.name} in branch: {branch}.")
                     log.dbg(f"The new project is repo is: \n{proj}")
                     new_proj = manifest.Project(proj.name, proj.url, 
-                        description=proj_dic.get('description'),
+                        # description=proj_dic.get('description'),
                         revision=proj_dic.get('revision'),
                         path=proj_dic.get('path'),
                         submodules=proj_dic.get('submodules'),
@@ -1964,7 +1964,8 @@ class MpvManifest(WestCommand):
                         topdir=proj_dic.get('topdir'),
                         remote_name=proj_dic.get('remote'),
                         groups=proj_dic.get('groups'),
-                        userdata=proj_dic.get('userdata'))
+                        # userdata=proj_dic.get('userdata')
+                        )
 
                     projects_list[i] = new_proj
                     log.dbg(f"new repo {new_proj.name} in branch: {branch}:\n{new_proj}")
