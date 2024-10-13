@@ -1,5 +1,4 @@
 import argparse
-# import os
 # from pathlib import Path
 # import re
 # import sys
@@ -10,6 +9,7 @@ import yaml
 import enum
 from typing import Any, Callable, Dict, Iterable, List, Optional
 import os
+import stat
 from pathlib import Path
 import shutil
 import pykwalify.core
@@ -1152,8 +1152,8 @@ class MpvUpdate(WestCommand):
 
                 if in_linux:
                     shutil.copy(hook_file, project_hook_dir)
-
-
+                    st = os.stat(hook_file)
+                    os.chmod(hook_file, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH )
 
 class MpvMerge(WestCommand):
     def __init__(self):
