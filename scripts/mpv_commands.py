@@ -1150,10 +1150,10 @@ class MpvUpdate(WestCommand):
                 log.dbg(f"hook_file: {hook_file}")
                 log.dbg(f"project_hook_dir: {project_hook_dir}")
 
-                if in_linux:
-                    shutil.copy(hook_file, project_hook_dir)
-                    st = os.stat(hook_file)
-                    os.chmod(hook_file, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH )
+                # if in_linux:
+                shutil.copy(hook_file, project_hook_dir)
+                st = os.stat(hook_file)
+                os.chmod(hook_file, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH )
 
 class MpvMerge(WestCommand):
     def __init__(self):
