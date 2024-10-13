@@ -7,8 +7,13 @@ branchPath=$(git symbolic-ref -q HEAD) #Somthing like refs/heads/myBranchName
 branchName=${branchPath##*/}      #Get text behind the last / of the branch path
 user=$USER
 hostname=$(hostname)
-[ -f "$file" ]
-in_docker=$?
+unamestr=$(uname)
+os_type=$OSTYPE
+
+in_docker=false
+if [ -f /.dockerenv ]; then
+    in_docker=true
+fi
 
 echo commit file: $1
 echo branchPath: $branchPath
@@ -25,3 +30,5 @@ echo branch: $branchName >> $1
 echo user: $user >> $1
 echo hostname: $hostname >> $1
 echo in_docker: $in_docker >> $1
+echo unamestr: $unamestr >> $1
+echo os_type: $os_type >> $1
