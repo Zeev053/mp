@@ -12,7 +12,10 @@ import os
 import stat
 from pathlib import Path
 import shutil
-import pykwalify.core
+# import pykwalify.core
+import logging
+from typing import NoReturn
+from version import __version__
 
 from west import log
 from west.commands import WestCommand
@@ -31,6 +34,81 @@ from west.app.project import Update
 from west.app.project import _rev_type as rev_type
 
 # from west.app.main import WestArgumentParser
+
+class mpv_log:
+    def __init__(self):
+        self._logger = logging.getLogger('mpv')
+
+        start = Path.cwd()
+        fall_back = True        
+        topdir = Path(util.west_topdir(start=start,
+                                       fall_back=fall_back)).resolve()
+
+        formatter = logging.Formatter(fmt="{asctime} - {levelname} - {message}",
+            style="{",
+            datefmt="%Y-%m-%d %H:%M")
+
+        logHandler = logging.handlers.RotatingFileHandler(topdir.joinpath('mpv.log'), maxBytes=50000, backupCount=10)
+        logHandler.setLevel(logging.INFO)
+        logHandler.setFormatter(formatter)
+        self._logger.addHandler(logHandler)
+
+        if log.VERBOSE > log.VERBOSE_NONE:
+            logHandler_debug = logging.handlers.RotatingFileHandler(topdir.joinpath('mpv-debug.log'), maxBytes=50000, backupCount=10)
+            logHandler_debug.setLevel(logging.DEBUG)
+            logHandler_debug.setFormatter(formatter)
+            self._logger.addHandler(logHandler_debug)
+            self._logger.setLevel(logging.DEBUG)
+            self._logger.debug("")
+            self._logger.debug(f"----------------------------------------------------")
+            self._logger.debug(f"Logger set to Debug level (log.VERBOSE: {log.VERBOSE})")
+        else:
+            self._logger.setLevel(logging.INFO)
+            self._logger.info("")
+            self._logger.info(f"----------------------------------------------------")
+            self._logger.info(f"Logger set to INFO level (log.VERBOSE: {log.VERBOSE})")
+
+
+
+    @property
+    def log(self) -> logging.Logger:
+        return self._logger
+
+    def dbg(self, message : str):
+        log.dbg(message)
+        self.log.debug(message)
+
+    def inf(self, message : str):
+        log.inf(message)
+        self.log.info(message)
+    
+    def banner(self, message : str):
+        log.banner(message)
+        self.inf('===' + message)
+        
+
+    def small_banner(self, message : str):
+        log.small_banner(message)
+        self.inf('---' + message)
+
+    def wrn(self, message : str):
+        log.wrn(message)
+        self.log.warning(message)
+    
+    def err(self, message : str, fatal=False):
+        log.err(message, fatal=fatal)
+        if fatal == False:
+            self.log.error(message)
+        else:
+            self.log.fatal(message)
+
+    def die(self, message : str) -> NoReturn:
+        self.log.fatal("die: " + message)
+        log.die(message)
+  
+
+i_logger = mpv_log()
+
 
 class ManifestActionType(enum.Enum):
         NEW_DATA_PROJ = enum.auto()
@@ -1023,8 +1101,11 @@ class MpvUpdate(WestCommand):
 
 
     def do_run(self, args, unknown):
-        log.banner(f"Update workspace: {util.west_topdir()}")
-        log.dbg(f"args: {args}")
+        i_logger.inf(f"")
+        i_logger.inf(f"mpv-update")
+        i_logger.inf(f"-----------")
+        i_logger.banner(f"Update workspace: {util.west_topdir()}")
+        i_logger.inf(f"args: {args}")
 
         # Update we don't Zephyr project
         dont_use_zephyr()
@@ -1033,25 +1114,25 @@ class MpvUpdate(WestCommand):
         update_filter_config(self.manifest, args)
 
         if args.depth_1==True and args.full_clone==True:
-            log.die("Can not define simultaneously --depth-1 and full-clone")
+            i_logger.die("Can not define simultaneously --depth-1 and full-clone")
 
         in_linux = False
         if sys.platform == "linux" or sys.platform == "linux2":
             in_linux = True
-        log.dbg(f"in_linux: {in_linux}")
+        i_logger.dbg(f"in_linux: {in_linux}")
 
 
-        log.banner(f"Update west.yml in manifest repository")
-        log.dbg(f"args.manifest_rev: {args.manifest_rev}")
+        i_logger.banner(f"Update west.yml in manifest repository")
+        i_logger.dbg(f"args.manifest_rev: {args.manifest_rev}")
         manifest_proj = self.manifest.get_projects(['manifest'])[0]
         manifest_proj.git(['fetch', '-t', '-f', '--all'])
 
         # Set manifest project to the request revision
         if args.manifest_rev is not None:
-            log.inf(f"Set manifest project to revision: {args.manifest_rev}")
+            i_logger.inf(f"Set manifest project to revision: {args.manifest_rev}")
             manifest_proj.git(['checkout', args.manifest_rev, "--"])
         else:
-            log.dbg(f"args.manifest_rev is None: {args.manifest_rev}")
+            i_logger.dbg(f"args.manifest_rev is None: {args.manifest_rev}")
 
 
         # Check that we not ahead of remote branch.
@@ -1066,9 +1147,9 @@ class MpvUpdate(WestCommand):
         ######################################################
         ahead = check_branch_ahead_remote(manifest_proj)
         if ahead > 0:
-            log.die(f"The manifest repo ({manifest_proj.name}) is more update than your remote.\nFirst call git push from manifest repo, \nand than call mpv-update again.")
+            i_logger.die(f"The manifest repo ({manifest_proj.name}) is more update than your remote.\nFirst call git push from manifest repo, \nand than call mpv-update again.")
 
-        log.dbg(f"call manifest_proj - git pull")
+        i_logger.dbg(f"call manifest_proj - git pull")
         # TODO: if in tag - don't do pull
         manifest_proj.git('pull', check=False)
         self.manifest = manifest.Manifest.from_file()
@@ -1078,12 +1159,12 @@ class MpvUpdate(WestCommand):
         #       then the tags will not download
         buildin_update_command(self.topdir, self.manifest)
 
-        log.banner(f"Checkout projects to the revision in manifest file")
+        i_logger.banner(f"Checkout projects to the revision in manifest file")
         mpv_manifest = mpv_from_yml(self.manifest, "HEAD")
         for project in self.manifest.projects:
-            log.banner(f"project: {project.name}")
-            log.inf(f"project location: {project.abspath}")
-            log.dbg(
+            i_logger.banner(f"project: {project.name}")
+            i_logger.inf(f"project location: {project.abspath}")
+            i_logger.dbg(
                 f"Project {project.name} is active: {self.manifest.is_active(project)} and is cloned: {project.is_cloned()}, clone-depth: {project.clone_depth}")
             project_mpv = mpv_manifest.get_projects([project.name])[0]
 
@@ -1101,32 +1182,32 @@ class MpvUpdate(WestCommand):
                 # Do full clone only if clone depth is less then 1 or argument full-clone exist
                 # Else - Use the already clone or fetch that west update did
                 if (args.depth_1 == False and ((project.clone_depth == None or project.clone_depth < 1) or args.full_clone == True)):
-                    log.inf(f"fetch all content")
+                    i_logger.inf(f"fetch all content")
                     project.git(['fetch', '--prune', '-t', '-f', '--all'], check=False)
                     if args.prune_all == True:
-                        log.dbg(f"prune_all==True, remove local branch with gone upstream")
+                        i_logger.dbg(f"prune_all==True, remove local branch with gone upstream")
                         cp = project.git('branch --format="%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)"',
                                         capture_stdout=True, capture_stderr=True,
                                         check=False)
                         branch2del = cp.stdout.decode('ascii').strip(' "\n\r').splitlines()
                         # Remove empty strings:
                         branch2del = list(filter(None, branch2del))
-                        log.inf(f"list of branch to delete: \n{branch2del}")
+                        i_logger.inf(f"list of branch to delete: \n{branch2del}")
                         if len(branch2del) > 0:
                             branch2del = ' '.join(branch2del)
-                            log.inf(f"delete the local branch without upstream: \n{branch2del}")
+                            i_logger.inf(f"delete the local branch without upstream: \n{branch2del}")
                             project.git(f"branch -D {branch2del}",
                                 check=False)
-                    log.inf(f"git checkout to {project.revision}")
+                    i_logger.inf(f"git checkout to {project.revision}")
                     project.git(['checkout', project.revision, "--"])
                     cp = project.git(['branch', '--show-current'], capture_stdout=True, capture_stderr=True, check=False)
                     current_branch = cp.stdout.decode('ascii', errors='ignore').strip()
                     if len(current_branch) == 0:
-                        log.dbg(f"Not in branch (call git fetch): result of 'git branch--show-current' is: {current_branch}")
+                        i_logger.dbg(f"Not in branch (call git fetch): result of 'git branch--show-current' is: {current_branch}")
                         project.git(['fetch'],
                                 check=False)
                     else:
-                        log.dbg(f"In branch  (call git pull): result of 'git branch--show-current' is: {current_branch}")
+                        i_logger.dbg(f"In branch  (call git pull): result of 'git branch--show-current' is: {current_branch}")
                         project.git(['pull'],
                                 check=False)
                     
@@ -1137,23 +1218,35 @@ class MpvUpdate(WestCommand):
 
             elif project.name == 'manifest':
                 # TODO: copy if we are in linux
-                log.inf(f"Skipped manifest project")
+                i_logger.inf(f"Skipped manifest project")
             else:
-                log.inf(f"Project {project.name} is not active or not cloned")
+                i_logger.inf(f"Project {project.name} is not active or not cloned")
 
         for project in self.manifest.projects:
             if project.name == 'manifest' or project.is_cloned():
                 mod_path = Path(__file__).parent.parent
                 hook_file = mod_path.joinpath("git-hook/commit-msg")
                 project_hook_dir = Path(project.abspath).joinpath(".git/hooks/")
-                log.dbg(f"mod_path: {mod_path}")
-                log.dbg(f"hook_file: {hook_file}")
-                log.dbg(f"project_hook_dir: {project_hook_dir}")
+                i_logger.dbg(f"mod_path: {mod_path}")
+                i_logger.dbg(f"hook_file: {hook_file}")
+                i_logger.dbg(f"project_hook_dir: {project_hook_dir}")
 
-                # if in_linux:
                 shutil.copy(hook_file, project_hook_dir)
                 st = os.stat(hook_file)
                 os.chmod(hook_file, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH )
+
+                commit_msg_file = project_hook_dir.joinpath("commit-msg")   
+                with open(commit_msg_file, 'r') as file:
+                    lines = file.readlines()
+
+
+                new_line_content = f"mpv_version={__version__}"
+                # Insert the new line after the specified line
+                lines.insert(6, new_line_content + '\n')
+                # Write the updated content back to the file
+                with open(commit_msg_file, 'w') as file:
+                    file.writelines(lines)
+
 
 class MpvMerge(WestCommand):
     def __init__(self):

@@ -27,6 +27,7 @@ echo >> $1
 echo Information added by mpv: >> $1
 echo ------------------------: >> $1
 echo branch: $branchName >> $1
+echo mpv_version: $mpv_version >> $1
 echo user: $user >> $1
 echo hostname: $hostname >> $1
 echo in_docker: $in_docker >> $1
