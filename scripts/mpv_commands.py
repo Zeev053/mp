@@ -105,7 +105,7 @@ class mpv_log:
     def die(self, message : str) -> NoReturn:
         self.log.fatal("die: " + message)
         log.die(message)
-  
+
 
 i_logger = mpv_log()
 
@@ -147,7 +147,7 @@ def get_current_bts(project: manifest.Project):
     '''
     Return the current branch or tag or sha of the git repo
     '''
-    log.dbg(f"get_current_bts() - project: {project}")
+    i_logger.dbg(f"get_current_bts() - project: {project}")
     bts = ""
     
     # 1. Check if repo is checkout to branch
@@ -155,34 +155,34 @@ def get_current_bts(project: manifest.Project):
                  capture_stdout=True, capture_stderr=True,
                  check=False)
     branch =  cp.stdout.decode('ascii').strip()
-    log.dbg(f"get_current_bts() - current branch is: {branch}")
+    i_logger.dbg(f"get_current_bts() - current branch is: {branch}")
 
     # The branch is NULL - or empty, it might be that we should checkout tag
     if branch != None and len(branch) > 0:
         ret = branch
         bts = "br"
-        log.dbg(f"get_current_bts() - found branch, return: {ret}, bts: {bts}")
+        i_logger.dbg(f"get_current_bts() - found branch, return: {ret}, bts: {bts}")
         return ret, bts
 
     # 2. Check if repo is checkout to tag
-    log.dbg(f"get_current_bts() - not in branch, try to find tag")
+    i_logger.dbg(f"get_current_bts() - not in branch, try to find tag")
     cp = project.git(f"describe --tags HEAD",
                  capture_stdout=True, capture_stderr=True,
                  check=False)
     tag =  cp.stdout.decode('ascii').strip()
-    log.dbg(f"get_current_bts() - current tag is: {tag}")
+    i_logger.dbg(f"get_current_bts() - current tag is: {tag}")
     if len(tag) > 0 and "fatal" not in tag:
         ret = tag
         bts = "tg"
-        log.dbg(f"get_current_bts() - found tag, return: {ret}, bts: {bts}")
+        i_logger.dbg(f"get_current_bts() - found tag, return: {ret}, bts: {bts}")
         return ret, bts
         
     
     # 3. Check if repo is checkout to tag
-    log.dbg(f"get_current_bts() - not in tag, try to find sha")
+    i_logger.dbg(f"get_current_bts() - not in tag, try to find sha")
     ret = str(project.sha("HEAD"))[0:6]
     bts = "sh"
-    log.dbg(f"get_current_bts() - current sha is: {ret}, bts: {bts}")
+    i_logger.dbg(f"get_current_bts() - current sha is: {ret}, bts: {bts}")
     return ret, bts
 
 
@@ -193,7 +193,7 @@ def is_tag_branch_commit(project: manifest.Project, rev: str) -> str:
     Otherwise return None
     """
 
-    log.dbg(f"is_tag_branch_commit() - project name: {project.name}, rev: {rev}")
+    i_logger.dbg(f"is_tag_branch_commit() - project name: {project.name}, rev: {rev}")
 
     # check if this is remote branch
     cp = project.git(f"show-ref --verify refs/remotes/origin/{rev}", 
@@ -231,7 +231,7 @@ def get_remote_branch_tag(project: manifest.Project):
     '''
     return string with all remote branches and tags
     '''
-    log.dbg(f"get_remote_branch_tag() - project name: {project.name}")
+    i_logger.dbg(f"get_remote_branch_tag() - project name: {project.name}")
     args = ["heads", "tags"]
     res_dic = {}
     # TODO: add 2 results, update code in clone depth and new project
@@ -242,21 +242,21 @@ def get_remote_branch_tag(project: manifest.Project):
         res = ', '.join(cp__list)
         res_dic[arg] = res
 
-    log.dbg(f'get_remote_branch_tag() - the branches of {project.name} are: {res_dic["heads"]}')
-    log.dbg(f'get_remote_branch_tag() - the tags of {project.name} are: {res_dic["tags"]}')
+    i_logger.dbg(f'get_remote_branch_tag() - the branches of {project.name} are: {res_dic["heads"]}')
+    i_logger.dbg(f'get_remote_branch_tag() - the tags of {project.name} are: {res_dic["tags"]}')
     return res_dic["heads"], res_dic["tags"]
 
 
 
 # TODO: check with tag and branch
 def check_branch_ahead_remote(project: manifest.Project, branch: Optional[str] = None) -> int:
-    log.dbg(f"check_branch_ahead_remote() - project: {project.name}, branch: {branch}")
+    i_logger.dbg(f"check_branch_ahead_remote() - project: {project.name}, branch: {branch}")
     if branch == None:
         cp = project.git(f"branch --show-current",
                      capture_stdout=True, capture_stderr=True,
                      check=False)
         branch =  cp.stdout.decode('ascii').strip()
-        log.dbg(f"check_branch_ahead_remote() - current branch is: {branch}")
+        i_logger.dbg(f"check_branch_ahead_remote() - current branch is: {branch}")
 
     # The branch is NULL - or empty, it might be that we should checkout tag
     if branch == None or len(branch) == 0:
@@ -266,7 +266,7 @@ def check_branch_ahead_remote(project: manifest.Project, branch: Optional[str] =
                      capture_stdout=True, capture_stderr=True,
                      check=False)
     ahead = int(cp.stdout.decode('ascii').strip())
-    log.dbg(f"check_branch_ahead_remote() - in repo: {project.name}, the branch local branch: {branch} is ahead of remote branch: {ahead}")
+    i_logger.dbg(f"check_branch_ahead_remote() - in repo: {project.name}, the branch local branch: {branch} is ahead of remote branch: {ahead}")
     
     return ahead
 
@@ -288,10 +288,10 @@ def new_project(project: manifest.Project):
 
 def add_project_2_manifest(project: manifest.Project, man: manifest.Manifest):
     if project.name not in man._projects_by_name:
-        log.dbg(f"add_project_2_manifest() - project: {project.name} is not in _projects_by_name, append it")
+        i_logger.dbg(f"add_project_2_manifest() - project: {project.name} is not in _projects_by_name, append it")
         man._projects.append(project)
     else:
-        log.wrn(f"add_project_2_manifest() - project: {project.name} already exist in _projects_by_name")
+        i_logger.wrn(f"add_project_2_manifest() - project: {project.name} already exist in _projects_by_name")
     
     man._projects_by_name.update({project.name: project})
 
@@ -302,19 +302,19 @@ def project_set_4_compare(man: manifest.Manifest):
     1. project name 
     2. project yaml, without the revision (exclude command project).
     '''
-    log.dbg(f"project_set_4_compare: arguments: {locals()}\n")
+    i_logger.dbg(f"project_set_4_compare: arguments: {locals()}\n")
     projects_list = list()
-    log.dbg(f"man.projects length: {len(man.projects)}\n")
+    i_logger.dbg(f"man.projects length: {len(man.projects)}\n")
     
     for project in man.projects:
-        log.dbg(f"  In project {project.name}")
+        i_logger.dbg(f"  In project {project.name}")
         project_dict = project.as_dict()
-        log.dbg(f"    project_dict: {project_dict}\n")
+        i_logger.dbg(f"    project_dict: {project_dict}\n")
         # Remove revision
         rev = "revision"
         west_commands = 'west-commands'
         if rev in project_dict and west_commands not in project_dict:
-            log.dbg(f"    Remove revision\n")
+            i_logger.dbg(f"    Remove revision\n")
             del project_dict["revision"]
         project_pair = tuple((project.name, yaml.safe_dump(project_dict)))
         projects_list.append(project_pair)
@@ -334,9 +334,9 @@ def mpv_branches(project: manifest.Project) -> list:
                      capture_stdout=True, capture_stderr=True,
                      check=False)
     branchs = cp.stdout.decode('ascii').strip()
-    log.dbg(f"branchs: {branchs}")
+    i_logger.dbg(f"branchs: {branchs}")
     branches = re.findall(r"(\S*__.*_(?:dev|integ|main))$", branchs, re.M)
-    log.dbg(f"mpv_branches: The list of branches:\n{branches}")
+    i_logger.dbg(f"mpv_branches: The list of branches:\n{branches}")
     
     return branches
 
@@ -348,22 +348,22 @@ def branches_str(project: str, version: str):  # -> list[str, str, str]:
         2. proj__ver_integ
         3. proj__ver_main
     '''
-    # log.dbg("branches_str()")
+    # i_logger.dbg("branches_str()")
     branches = []
     type_str = ["dev", "integ", "main"]
     for i in BranchType:
-        # log.dbg(f"i: {i}, value: {i.value}")
+        # i_logger.dbg(f"i: {i}, value: {i.value}")
         branch = "main"
         if (project is not None) and (version is not None):
             branch = project + "__" + version + "_" + type_str[i.value]
-        # log.dbg(f"branch: {branch}")
+        # i_logger.dbg(f"branch: {branch}")
         branches.append(branch)
-    # log.dbg(f"branches_str() - branches: {branches}")
+    # i_logger.dbg(f"branches_str() - branches: {branches}")
     return branches
 
 
 def check_branch_exist(project: manifest.Project, branch_name: str, is_remote: bool) -> bool:
-    # log.dbg(f"check_branch_exist(): arguments: {locals()}")
+    # i_logger.dbg(f"check_branch_exist(): arguments: {locals()}")
 
     # check if it tag:
     rtype = rev_type(project, branch_name)
@@ -381,9 +381,9 @@ def check_branch_exist(project: manifest.Project, branch_name: str, is_remote: b
                          capture_stdout=True, capture_stderr=True,
                          check=False)
 
-    # log.dbg(f"cp.stdout: {cp.stdout}")
+    # i_logger.dbg(f"cp.stdout: {cp.stdout}")
     branch_exist = True if cp.stdout else False
-    # log.dbg(f"check_branch_exist() - {branch_name} exist: {branch_exist}, is remote: {is_remote}")
+    # i_logger.dbg(f"check_branch_exist() - {branch_name} exist: {branch_exist}, is remote: {is_remote}")
     return branch_exist
 
 
@@ -393,17 +393,17 @@ def get_remote_default_branch(project: manifest.Project) -> str:
                      capture_stdout=True, capture_stderr=True,
                      check=False)
     default_branch = cp.stdout.decode('ascii').strip()
-    log.dbg(f"default_branch: {default_branch}")
+    i_logger.dbg(f"default_branch: {default_branch}")
     m = re.search("HEAD branch: (.*)$", default_branch, re.M)
-    log.dbg(f"m after search: {m}")
+    i_logger.dbg(f"m after search: {m}")
     if m is not None:
-        log.dbg(f"groups in: {m.groups()}")
-        log.dbg(f"group(1) in: {m.group(1)}")
+        i_logger.dbg(f"groups in: {m.groups()}")
+        i_logger.dbg(f"group(1) in: {m.group(1)}")
         ret = m.group(1)
 
-    log.dbg(f"default_branch after search: {default_branch}")
+    i_logger.dbg(f"default_branch after search: {default_branch}")
 
-    log.dbg(f"type of ret: {type(ret)}")
+    i_logger.dbg(f"type of ret: {type(ret)}")
     return ret
 
 
@@ -411,7 +411,7 @@ def fetch_proj_depth(project: manifest.Project, fetch_depth: str):
     '''
     fetch repo with specific depth
     '''
-    log.dbg(f"fetch_proj_depth() - project: {project.name} fetch_depth: {fetch_depth}")
+    i_logger.dbg(f"fetch_proj_depth() - project: {project.name} fetch_depth: {fetch_depth}")
 
     # The output of git ls-remote is two columns: sha, ref
     # e.g.:
@@ -420,49 +420,49 @@ def fetch_proj_depth(project: manifest.Project, fetch_depth: str):
     
     # Find branches
     branches, tags = get_remote_branch_tag(project)
-    log.dbg(f"the branches are: {branches}")
-    log.dbg(f"the branches are: {tags}")
+    i_logger.dbg(f"the branches are: {branches}")
+    i_logger.dbg(f"the branches are: {tags}")
 
     cp = project.git(f'ls-remote --tags -q', check=False, capture_stdout=True)
     tags_lines = cp.stdout.decode('ascii', errors='ignore').strip(' "\n\r').splitlines()
     tags_list = [line.split()[1] for line in tags_lines]
     tags = ', '.join(tags_list)
-    log.dbg(f"the tags are: {tags}")
+    i_logger.dbg(f"the tags are: {tags}")
     
     if f"{project.revision}" in branches:
-        log.dbg(f"fetch remote branch {project.revision} with depth {fetch_depth}")
+        i_logger.dbg(f"fetch remote branch {project.revision} with depth {fetch_depth}")
         project.git(f'fetch -f --depth {fetch_depth} -- {project.url} +refs/heads/{project.revision}:refs/remotes/origin/{project.revision}', check=True)
     elif f"{project.revision}" in tags:
-        log.dbg(f"fetch remote tag {project.revision} with depth {fetch_depth}")
+        i_logger.dbg(f"fetch remote tag {project.revision} with depth {fetch_depth}")
         project.git(f'fetch -f --depth {fetch_depth} --no-tags -- {project.url} +refs/tags/{project.revision}:refs/tags/{project.revision}', check=True)
     else:
-        log.inf(f"depth: {fetch_depth}, the revision is sha: {project.revision} - already fetch by west update")
-        log.dbg(f"The revision {project.revision} might be sha - do no fetch, because west update did it")
+        i_logger.inf(f"depth: {fetch_depth}, the revision is sha: {project.revision} - already fetch by west update")
+        i_logger.dbg(f"The revision {project.revision} might be sha - do no fetch, because west update did it")
 
 
 def dont_use_zephyr():
-    log.dbg("Update configuration that we don't use Zephyr")
+    i_logger.dbg("Update configuration that we don't use Zephyr")
     update_config('zephyr', 'base', 'not-using-zephyr')
 
 
 def filters_set_in_manifest(man: manifest.Manifest) -> set:
-    log.dbg(f"In filters_set_in_manifest()")
+    i_logger.dbg(f"In filters_set_in_manifest()")
 
     # Create set to be sure that no duplicate of filters exist
     filters = set()
     for project in man.projects:
-        # log.dbg(f"Project {project.name} \ngroups: {project.groups}")
+        # i_logger.dbg(f"Project {project.name} \ngroups: {project.groups}")
         # Use update, because groups is list
         filters.update(project.groups)
 
-    log.dbg(f"filters_set_in_manifest() - filters in west manifest: {filters}")
+    i_logger.dbg(f"filters_set_in_manifest() - filters in west manifest: {filters}")
 
     return filters
 
 
 # Update the components that the user want to download
 def update_filter_config(man: manifest.Manifest, args):
-    log.dbg(f"UpdateFilterConfig(). args: {args}")
+    i_logger.dbg(f"UpdateFilterConfig(). args: {args}")
     filters_in_manifest = filters_set_in_manifest(man)
 
     filter_string = ""
@@ -472,20 +472,20 @@ def update_filter_config(man: manifest.Manifest, args):
             if component in filters_in_manifest:
                 filter_string += '+' + component + ','
             else:
-                log.wrn(f"The filter {component} is not part of west.yml")
-            log.dbg(f"Add component {component} to workspace")
+                i_logger.wrn(f"The filter {component} is not part of west.yml")
+            i_logger.dbg(f"Add component {component} to workspace")
         if len(filter_string) > 0:
             # Remove last ','
             filter_string = filter_string[:-1]
     else:
-        log.dbg(f"No component was chosen, Enable all filters")
+        i_logger.dbg(f"No component was chosen, Enable all filters")
         for filt in filters_in_manifest:
             # In order to distinguish between RC and RCU
             filter_string += '+' + filt + ','
-            log.dbg(f"Add component {filt} to workspace")
+            i_logger.dbg(f"Add component {filt} to workspace")
         filter_string = filter_string[:-1]
 
-    log.dbg(f"update_filter_config() - filter_string: {filter_string}")
+    i_logger.dbg(f"update_filter_config() - filter_string: {filter_string}")
     update_config('manifest', 'group-filter', filter_string)
 
 
@@ -497,7 +497,7 @@ def update_filter_manifest(man: manifest.Manifest):
         filter_strings.append('-' + filt)
 
     man.group_filter = filter_strings
-    log.dbg(f"update_filter_manifest() - man.group_filter: {man.group_filter}")
+    i_logger.dbg(f"update_filter_manifest() - man.group_filter: {man.group_filter}")
 
 
 # Call to update command from west project
@@ -508,8 +508,8 @@ def buildin_update_command(topdir, manifest, projects_str: list = []):
     if log.VERBOSE < log.VERBOSE_NORMAL:
         command_list.remove('-v')
 
-    log.dbg(f"buildin_update_command() - command_list: {command_list}")
-    log.inf(f"buildin_update_command() - Call west update command for projects: {projects_str} - ")
+    i_logger.dbg(f"buildin_update_command() - command_list: {command_list}")
+    i_logger.inf(f"buildin_update_command() - Call west update command for projects: {projects_str} - ")
     app.run(command_list)
 
     # update_cmnd = Update()
@@ -520,7 +520,7 @@ def buildin_update_command(topdir, manifest, projects_str: list = []):
     # update_cmnd.add_parser(subparser_gen)
     # argument = ['update', '-n'] + projects_str
     # update_args, unknown = parser.parse_known_args(argument)
-    # log.inf(f"Call west update command for projects: {projects_str} - ")
+    # i_logger.inf(f"Call west update command for projects: {projects_str} - ")
     # update_cmnd.run(update_args, unknown, topdir, manifest)
 
 
@@ -653,7 +653,7 @@ class ManifestMpv:
         r['manifest']['projects'] = project_dicts
         r['manifest']['self'] = self._smpv.as_dict()
 
-        # log.dbg(f"_as_dict_helper() - return manifest dictionary: \n{r}")
+        # i_logger.dbg(f"_as_dict_helper() - return manifest dictionary: \n{r}")
 
         return r
 
@@ -692,18 +692,18 @@ class ManifestMpv:
         self._projects = list()
         self._projects_by_name: Dict[str, ProjectMpv] = {}
         if 'projects' not in man:
-            log.die(f"_load() - projects not in manifest")
+            i_logger.die(f"_load() - projects not in manifest")
             return
 
         for pd in man['projects']:
             # project = self._load_project(pd)
             name: str = pd['name']
             mt: str = pd.get('content')
-            # log.dbg(f"merge-type: {mt}")
+            # i_logger.dbg(f"merge-type: {mt}")
             content = ContentType[pd.get('content')]
             project = ProjectMpv(name, content)
             if project.name in self._projects_by_name:
-                log.wrn(f"ManifestMpv._load() - Project {project.name} already exist, continue")
+                i_logger.wrn(f"ManifestMpv._load() - Project {project.name} already exist, continue")
                 continue
             self._projects.append(project)
             self._projects_by_name.update({name: project})
@@ -712,7 +712,7 @@ class ManifestMpv:
         smpv = _SelfMpv(MergeType.SOURCE_DATA)
 
         if 'self' not in manifest_data:
-            log.dbg('_load_self() - self: unset')
+            i_logger.dbg('_load_self() - self: unset')
             return smpv
 
         if 'merge-method' in manifest_data['self']:
@@ -776,9 +776,9 @@ def add_mpv_project_2_manifest(mpv_project: ProjectMpv, mpv_man: ManifestMpv):
     mpv_names_list = [item.name for item in mpv_projects]
     
     if mpv_project.name in mpv_names_list:
-        log.wrn(f"add_mpv_project_2_manifest() - mpv_project {mpv_project.name} already exist, remove it and recreate")
+        i_logger.wrn(f"add_mpv_project_2_manifest() - mpv_project {mpv_project.name} already exist, remove it and recreate")
         index = mpv_names_list.index(mpv_project.name)
-        log.dbg(f"add_mpv_project_2_manifest() - index: {index} - remove this index from mpv_projects")
+        i_logger.dbg(f"add_mpv_project_2_manifest() - index: {index} - remove this index from mpv_projects")
         mpv_projects.pop(index)
         mpv_projects.insert
             
@@ -790,14 +790,14 @@ def add_mpv_project_2_manifest(mpv_project: ProjectMpv, mpv_man: ManifestMpv):
 def mpv_set_4_compare(mpv_manifest: ManifestMpv):
     ''' Return set of projects for comparing between 2 manifests in mpv.
     '''
-    log.dbg(f"mpv_set_4_compare: arguments: {locals()}\n")
+    i_logger.dbg(f"mpv_set_4_compare: arguments: {locals()}\n")
     projects_list = list()
-    log.dbg(f"mpv_manifest.projects length: {len(mpv_manifest.projects)}\n")
+    i_logger.dbg(f"mpv_manifest.projects length: {len(mpv_manifest.projects)}\n")
     
     for project in mpv_manifest.projects:
-        log.dbg(f"  In project {project.name}")
+        i_logger.dbg(f"  In project {project.name}")
         project_dict = project.as_dict()
-        log.dbg(f"    project_dict: {project_dict}\n")
+        i_logger.dbg(f"    project_dict: {project_dict}\n")
         project_pair = tuple((project.name, yaml.safe_dump(project_dict)))
         projects_list.append(project_pair)
     
@@ -816,7 +816,7 @@ def update_manifest_new_branches(manifest_proj: manifest.Project,
                                  ver: str,
                                  manifest_path: str,
                                  mpv_command_name: str):
-    log.dbg(f"update_manifest_new_branches(): arguments: {locals()}")
+    i_logger.dbg(f"update_manifest_new_branches(): arguments: {locals()}")
 
     manifest_proj.git(['fetch', '-p'])
     branches_names = branches_str(projname, ver)
@@ -825,28 +825,28 @@ def update_manifest_new_branches(manifest_proj: manifest.Project,
         , (branches_names[BranchType.MAIN.value], main_manifest)]
     # manifest_path = dev_manifest.path
     manifest_mpv_path = manifest_path.replace('west.yml', 'mpv.yml')
-    log.dbg(
+    i_logger.dbg(
         f'update_manifest_new_branches(): path of manifest: {manifest_path} \npath of mpv manifest: {manifest_mpv_path}')
     default_branch = get_remote_default_branch(manifest_proj)
-    log.dbg(f"default_branch: {default_branch}")
+    i_logger.dbg(f"default_branch: {default_branch}")
     for manifest_pair in manifests_list:
         branch_name, manifest_obj = manifest_pair
-        log.inf(f"update_manifest_new_branches(): Update manifest for branch: {branch_name}")
-        log.inf(f"update_manifest_new_branches(): Create new branch in manifest repo: {branch_name}")
+        i_logger.inf(f"update_manifest_new_branches(): Update manifest for branch: {branch_name}")
+        i_logger.inf(f"update_manifest_new_branches(): Create new branch in manifest repo: {branch_name}")
         manifest_proj.git(['branch', f"{branch_name}", f"origin/{default_branch}"],
                           check=False)
         manifest_proj.git(['checkout', f"{branch_name}", '--'],
                           check=False)
         manifest_fd = open(manifest_path, "w")
-        log.dbg(f"----------------------------------------")
-        log.dbg(
+        i_logger.dbg(f"----------------------------------------")
+        i_logger.dbg(
             f"update_manifest_new_branches(): update west.yml, branch: {branch_name} yaml: \n {manifest_obj.as_yaml()}\n")
         manifest_fd.write(manifest_obj.as_yaml())
         manifest_fd.close()
 
         manifest_mpv_fd = open(manifest_mpv_path, "w")
-        log.dbg(f"----------------------------------------")
-        log.dbg(
+        i_logger.dbg(f"----------------------------------------")
+        i_logger.dbg(
             f"update_manifest_new_branches(): update mpv.yml, branch: {branch_name} yaml: \n {mpv_manifest.as_yaml()}")
         manifest_mpv_fd.write(mpv_manifest.as_yaml())
         manifest_mpv_fd.close()
@@ -866,17 +866,17 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
              self_manifest: manifest.Manifest, mpv_command_name: str):
     origin_branch = source_branch
     dest_branches = branches_str(dest_proj, dest_ver)
-    log.dbg(f'origin_branch: {origin_branch}')
-    log.dbg(f'dest_branches: {dest_branches}')
+    i_logger.dbg(f'origin_branch: {origin_branch}')
+    i_logger.dbg(f'dest_branches: {dest_branches}')
 
     # local_org_branch = org_branches[BranchType.MAIN.value]
     # remote_org_branch_full = f'origin/{org_branches[BranchType.MAIN.value]}'
 
     # if (org_proj == dest_proj):
-    # log.die(f"The name of the origin project and the name of the new project are the same - exit")
+    # i_logger.die(f"The name of the origin project and the name of the new project are the same - exit")
 
     self_manifest.projects[0].git(['fetch', '-p'])
-    log.dbg(f'Delete local branch - if exist')
+    i_logger.dbg(f'Delete local branch - if exist')
     self_manifest.projects[0].git(
         ['branch', '-D', dest_branches[BranchType.DEVELOP.value],
          dest_branches[BranchType.INTEGRATION.value], dest_branches[BranchType.MAIN.value]],
@@ -885,14 +885,14 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
     # Check type of revision, and update the string of remote branch accordingly
     remote_org_branch_full = f"origin/{origin_branch}"
     ver_type = is_tag_branch_commit(self_manifest.projects[0], origin_branch)
-    log.dbg(f"ver_type: {ver_type}")
+    i_logger.dbg(f"ver_type: {ver_type}")
     if(ver_type == "tg" or ver_type == "cm"):
         remote_org_branch_full = origin_branch
 
-    log.dbg(f"remote_origin_branch_full: {remote_org_branch_full}")
+    i_logger.dbg(f"remote_origin_branch_full: {remote_org_branch_full}")
 
     west_str = self_manifest.projects[0].read_at("west.yml", remote_org_branch_full).decode('utf-8')
-    log.dbg(f'west_str from branch {remote_org_branch_full}:\n{west_str}')
+    i_logger.dbg(f'west_str from branch {remote_org_branch_full}:\n{west_str}')
 
     origin_manifest = manifest.Manifest.from_data(west_str)
     dev_manifest = manifest.Manifest.from_data(west_str)
@@ -909,9 +909,9 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
     while i < manifest_len:
         # for project in self_manifest.projects:
         project = self_manifest.projects[i]
-        log.inf(f"")
-        log.small_banner(f"project: {project.name}")
-        log.dbg(
+        i_logger.inf(f"")
+        i_logger.small_banner(f"project: {project.name}")
+        i_logger.dbg(
             f"Project {project.name} is active: {self_manifest.is_active(project)} and is cloned: {project.is_cloned()}, clone-depth: {project.clone_depth}")
         if (self_manifest.is_active(project) and
                 project.is_cloned() and
@@ -920,16 +920,16 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
 
             project_mpv = mpv_manifest.get_projects([project.name])[0]
             if project_mpv == None:
-                log.wrn(f'project_mpv for project {project.name} is None - continue')
+                i_logger.wrn(f'project_mpv for project {project.name} is None - continue')
                 i = i + 1
                 continue
             
-            log.dbg(f'project_mpv: {project_mpv}')
+            i_logger.dbg(f'project_mpv: {project_mpv}')
             content: ContentType = project_mpv.content
 
             # if the repository is west command project - continue
             if content == ContentType.COMMANDS:
-                log.dbg(f'In command repository - continue')
+                i_logger.dbg(f'In command repository - continue')
                 i = i + 1
                 continue
 
@@ -938,7 +938,7 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
             if content == ContentType.EXTERNAL or content == ContentType.ALL_PROJECTS:
                 project_org = origin_manifest.projects[i]
                 revision = project_org.revision
-                log.dbg(f'In {content} repository {project.name}, update revision to {revision}')
+                i_logger.dbg(f'In {content} repository {project.name}, update revision to {revision}')
                 dev_manifest.projects[i].revision = revision
                 integ_manifest.projects[i].revision = revision
                 main_manifest.projects[i].revision = revision
@@ -946,10 +946,10 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
             # if the type of the project is data, and repository is source_branch, take the SHA from original repository
             elif proj_type == 'd' and content == ContentType.SOURCE:
                 project.git(['fetch', '-p'])
-                log.dbg(f'get sha in project {project.name} in branch: {remote_org_branch_full}')
+                i_logger.dbg(f'get sha in project {project.name} in branch: {remote_org_branch_full}')
                 # project_org.git(f'{remote_org_branch_full}^{{commit}}')
                 sha = project.sha(remote_org_branch_full)
-                log.dbg(f'sha of repository {project.name} is {sha} \nUpdate in all manifests')
+                i_logger.dbg(f'sha of repository {project.name} is {sha} \nUpdate in all manifests')
                 dev_manifest.projects[i].revision = sha
                 integ_manifest.projects[i].revision = sha
                 main_manifest.projects[i].revision = sha
@@ -965,37 +965,37 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
                 org_exist = check_branch_exist(project, origin_branch, True)
                 dest_exist = check_branch_exist(project, dest_branches[BranchType.DEVELOP.value], True)
                 if not org_exist:
-                    log.die(f"The origin branch {origin_branch} doesn't exist in project {project.name} - exit")
+                    i_logger.die(f"The origin branch {origin_branch} doesn't exist in project {project.name} - exit")
 
                 if dest_exist == True:
-                    log.die(
+                    i_logger.die(
                         f"The destination branch {dest_branches[BranchType.DEVELOP.value]} already exist in project {project.name} - exit")
 
                 # Create local branch
                 # project.git(['branch', origin_branch],
                 #           check=False)
-                log.dbg(f'Delete local branch - if exist')
+                i_logger.dbg(f'Delete local branch - if exist')
                 project.git(
                     ['branch', '-D', dest_branches[BranchType.DEVELOP.value],
                      dest_branches[BranchType.INTEGRATION.value], dest_branches[BranchType.MAIN.value]],
                     check=False)
 
-                log.inf(f"Create branch {dest_branches[BranchType.DEVELOP.value]} to project {project.name}")
+                i_logger.inf(f"Create branch {dest_branches[BranchType.DEVELOP.value]} to project {project.name}")
                 project.git(
                     ['branch', '--no-track', dest_branches[BranchType.DEVELOP.value], remote_org_branch_full],
                     check=False)
 
-                log.inf(f"Create branch {dest_branches[BranchType.INTEGRATION.value]} to project {project.name}")
+                i_logger.inf(f"Create branch {dest_branches[BranchType.INTEGRATION.value]} to project {project.name}")
                 project.git(['branch', '--no-track', dest_branches[BranchType.INTEGRATION.value],
                              remote_org_branch_full],
                             check=False)
 
-                log.inf(f"Create branch {dest_branches[BranchType.MAIN.value]} to project {project.name}")
+                i_logger.inf(f"Create branch {dest_branches[BranchType.MAIN.value]} to project {project.name}")
                 project.git(
                     ['branch', '--no-track', dest_branches[BranchType.MAIN.value], remote_org_branch_full],
                     check=False)
 
-                log.inf(f"Push all new branches to remote origin")
+                i_logger.inf(f"Push all new branches to remote origin")
                 project.git(['push', '-u', 'origin'
                                 , dest_branches[BranchType.DEVELOP.value]
                                 , dest_branches[BranchType.INTEGRATION.value]
@@ -1008,20 +1008,20 @@ def new_proj(source_branch: str, dest_proj: str, dest_ver: str, proj_type: str,
                 main_manifest.projects[i].revision = dest_branches[BranchType.MAIN.value]
 
             else:
-                log.err(f"In project {project.name} - if we come to this point there is bug")
+                i_logger.err(f"In project {project.name} - if we come to this point there is bug")
 
         i = i + 1
         # ############# Finish while loop
 
-    log.dbg(f"--------------------------------------------------")
-    log.dbg(f"dev_manifest :\n{dev_manifest}")
-    log.dbg(f"--------------------------------------------------")
-    log.dbg(f"integ_manifest :\n{integ_manifest}")
-    log.dbg(f"--------------------------------------------------")
-    log.dbg(f"main_manifest :\n{main_manifest}")
-    log.dbg(f"--------------------------------------------------")
+    i_logger.dbg(f"--------------------------------------------------")
+    i_logger.dbg(f"dev_manifest :\n{dev_manifest}")
+    i_logger.dbg(f"--------------------------------------------------")
+    i_logger.dbg(f"integ_manifest :\n{integ_manifest}")
+    i_logger.dbg(f"--------------------------------------------------")
+    i_logger.dbg(f"main_manifest :\n{main_manifest}")
+    i_logger.dbg(f"--------------------------------------------------")
 
-    log.small_banner(f"Update manifest project with the new branches")
+    i_logger.small_banner(f"Update manifest project with the new branches")
     mpv_str = self_manifest.projects[0].read_at("mpv.yml", remote_org_branch_full).decode('utf-8')
     mpv_manifest = ManifestMpv.from_data(mpv_str, topdir=self_manifest.topdir)
     smpv = mpv_manifest.self_mpv
@@ -1170,7 +1170,7 @@ class MpvUpdate(WestCommand):
 
             content: ContentType = None
             if project_mpv == None:
-                log.wrn(f'project_mpv for project {project.name} is None - continue')
+                i_logger.wrn(f'project_mpv for project {project.name} is None - continue')
             else:
                 content = project_mpv.content
 
@@ -1327,17 +1327,17 @@ class MpvMerge(WestCommand):
         return parser
 
     def do_run(self, args, unknown):
-        log.banner(f"Merge from branch {args.branch_from} to branch {args.branch_to}")
+        i_logger.banner(f"Merge from branch {args.branch_from} to branch {args.branch_to}")
 
-        log.dbg(f"args: {args}")
+        i_logger.inf(f"args: {args}")
 
-        log.dbg(f"branch_from: {args.branch_from}")
-        log.dbg(f"branch_to: {args.branch_to}")
-        log.dbg(f"o: {args.o}")
-        log.dbg(f"t: {args.t}")
+        i_logger.dbg(f"branch_from: {args.branch_from}")
+        i_logger.dbg(f"branch_to: {args.branch_to}")
+        i_logger.dbg(f"o: {args.o}")
+        i_logger.dbg(f"t: {args.t}")
 
-        # log.dbg(f"type o: {type(args.o)}")
-        # log.dbg(f"type t: {type(args.t)}")
+        # i_logger.dbg(f"type o: {type(args.o)}")
+        # i_logger.dbg(f"type t: {type(args.t)}")
        
         manifest_proj = self.manifest.projects[0]
         # local_org_branch = org_branches[BranchType.MAIN.value]
@@ -1355,10 +1355,10 @@ class MpvMerge(WestCommand):
 
         # Check if both branches are the same one
         if (args.branch_from == args.branch_to):
-            log.die(f"Can't to merge from branch to itself (branch name: {args.branch_to})")
+            i_logger.die(f"Can't to merge from branch to itself (branch name: {args.branch_to})")
 
         # Check if to merge in the project itself
-        log.dbg(f'fetch manifest project and checkout to {args.branch_to}')
+        i_logger.dbg(f'fetch manifest project and checkout to {args.branch_to}')
         manifest_proj.git(['fetch', '-p'])
         manifest_proj.git(['fetch', '-t'])
         manifest_proj.git(['checkout', args.branch_to, "--"])
@@ -1375,34 +1375,34 @@ class MpvMerge(WestCommand):
         ######################################################
         ahead = check_branch_ahead_remote(manifest_proj, args.branch_to)
         if ahead > 0:
-            log.die(f"The manifest repo ({manifest_proj.name}) is more update than your remote.\nFirst call git push from manifest repo, \nand than call mpv-update again.")
+            i_logger.die(f"The manifest repo ({manifest_proj.name}) is more update than your remote.\nFirst call git push from manifest repo, \nand than call mpv-update again.")
         manifest_proj.git(['pull'])
 
-        log.dbg(f'get mpv.yml from destination branch: {args.branch_to}')
+        i_logger.dbg(f'get mpv.yml from destination branch: {args.branch_to}')
         dest_mpv_str = manifest_proj.read_at("mpv.yml", args.branch_to).decode('utf-8')
         dest_mpv_manifest = ManifestMpv.from_data(dest_mpv_str, topdir=self.manifest.topdir)
-        log.dbg(f'dest_mpv_manifest from branch {args.branch_to}: \n{dest_mpv_manifest.as_yaml()}\n')
+        i_logger.dbg(f'dest_mpv_manifest from branch {args.branch_to}: \n{dest_mpv_manifest.as_yaml()}\n')
 
-        log.dbg(f'get west.yml from destination branch: {args.branch_to}')
+        i_logger.dbg(f'get west.yml from destination branch: {args.branch_to}')
         local_dest_west_str = manifest_proj.read_at("west.yml", args.branch_to).decode('utf-8')
         dest_manifest = manifest.Manifest.from_data(local_dest_west_str)
-        log.dbg(f"dest_manifest BEFORE changes: \n{dest_manifest.as_yaml()}\n")
+        i_logger.dbg(f"dest_manifest BEFORE changes: \n{dest_manifest.as_yaml()}\n")
 
-        log.dbg(f'get mpv.yml from parent branch: {remote_branch_from}')
+        i_logger.dbg(f'get mpv.yml from parent branch: {remote_branch_from}')
         remote_org_mpv_str = manifest_proj.read_at("mpv.yml", remote_branch_from).decode('utf-8')
         org_mpv_manifest = ManifestMpv.from_data(remote_org_mpv_str, topdir=self.manifest.topdir)
-        log.dbg(f'org_mpv_manifest from branch {remote_branch_from}: \n{org_mpv_manifest.as_yaml()}\n')
+        i_logger.dbg(f'org_mpv_manifest from branch {remote_branch_from}: \n{org_mpv_manifest.as_yaml()}\n')
 
-        log.dbg(f'get west.yml from parent branch: {remote_branch_from}')
+        i_logger.dbg(f'get west.yml from parent branch: {remote_branch_from}')
         remote_org_west_str = manifest_proj.read_at("west.yml", remote_branch_from).decode('utf-8')
         org_manifest = manifest.Manifest.from_data(remote_org_west_str)
-        log.dbg(f'org_manifest: \n{org_manifest.as_yaml()}\n')
+        i_logger.dbg(f'org_manifest: \n{org_manifest.as_yaml()}\n')
 
         org_merge_method: MergeType = org_mpv_manifest.self_mpv.merge_method
-        log.inf(f'merge method of : {org_merge_method}')
+        i_logger.inf(f'merge method of : {org_merge_method}')
 
         merge_method: MergeType = dest_mpv_manifest.self_mpv.merge_method
-        log.inf(f'merge method: {merge_method}')
+        i_logger.inf(f'merge method: {merge_method}')
 
 
         # Indicate if to update west.yml in destination
@@ -1422,24 +1422,24 @@ class MpvMerge(WestCommand):
         #
         # Go over all repositories and merge them
         for project in self.manifest.projects:
-            log.inf('')
-            log.small_banner(f"project: {project.name}")
+            i_logger.inf('')
+            i_logger.small_banner(f"project: {project.name}")
             if project.name == 'manifest':
-                log.dbg('Take care to manifest later...')
+                i_logger.dbg('Take care to manifest later...')
                 continue
 
             project_mpv = dest_mpv_manifest.get_projects([project.name])[0]
             if project_mpv == None:
-                log.wrn(f'project_mpv for project {project.name} is None - continue')
+                i_logger.wrn(f'project_mpv for project {project.name} is None - continue')
                 continue
 
             content = project_mpv.content
-            log.dbg(
+            i_logger.dbg(
                 f"Project {project.name} is active: {self.manifest.is_active(project)}, and is cloned: {project.is_cloned()}, mpv content = {content}, clone-depth: {project.clone_depth}")
 
             # check if argument -t filter this repo from merge:
             if len(args.t) and not (content.name in args.t or project.name in args.t):
-                log.inf(f"The repo {project.name} is filter by -t flag, continue")
+                i_logger.inf(f"The repo {project.name} is filter by -t flag, continue")
                 continue
 
             merge_opt = ""
@@ -1447,28 +1447,28 @@ class MpvMerge(WestCommand):
                 for repo_opt in args.o:
                     if content.name == repo_opt[0] or project.name == repo_opt[0]:
                         merge_opt += repo_opt[1] + " "
-                        log.dbg(f"Add merge option: {repo_opt[1]} - for repo: {project.name}, repo_opt: {repo_opt}")
-            log.dbg(f"repo: {project.name}, merge_opt: {merge_opt}")
+                        i_logger.dbg(f"Add merge option: {repo_opt[1]} - for repo: {project.name}, repo_opt: {repo_opt}")
+            i_logger.dbg(f"repo: {project.name}, merge_opt: {merge_opt}")
 
             if (self.manifest.is_active(project) and
                     project.is_cloned() and
                     content != ContentType.COMMANDS):
-                log.dbg(f"git fetch")
+                i_logger.dbg(f"git fetch")
                 project.git(['fetch', '-p'],
                             capture_stdout=True, capture_stderr=True,
                             check=False)
 
                 local_org_exist = check_branch_exist(project, args.branch_from, False)
-                log.dbg(f"{args.branch_from} exist: {local_org_exist}")
+                i_logger.dbg(f"{args.branch_from} exist: {local_org_exist}")
 
                 remote_org_exist = check_branch_exist(project, args.branch_from, True)
-                log.dbg(f"{remote_branch_from} exist: {remote_org_exist}")
+                i_logger.dbg(f"{remote_branch_from} exist: {remote_org_exist}")
 
                 local_dest_exist = check_branch_exist(project, args.branch_to, False)
-                log.dbg(f"{args.branch_to} exist: {local_dest_exist}")
+                i_logger.dbg(f"{args.branch_to} exist: {local_dest_exist}")
 
                 remote_dest_exist = check_branch_exist(project, args.branch_to, True)
-                log.dbg(f"{remote_branch_to} exist: {remote_dest_exist}")
+                i_logger.dbg(f"{remote_branch_to} exist: {remote_dest_exist}")
 
                 dest_project = dest_manifest.get_projects([project.name])[0]
                 org_project = org_manifest.get_projects([project.name])[0]
@@ -1477,20 +1477,20 @@ class MpvMerge(WestCommand):
                 #    or in SOURCE repository and merge method of SOURCE_DATA
                 if (content == ContentType.DATA or
                         content == ContentType.SOURCE and merge_method == MergeType.SOURCE_DATA):
-                    log.inf(f'1. Regular git merge to repository: {project.name}')
+                    i_logger.inf(f'1. Regular git merge to repository: {project.name}')
 
                     if remote_org_exist == False or remote_dest_exist == False:
-                        log.die(f'remote_org_exist ({remote_org_exist}) not exist'
+                        i_logger.die(f'remote_org_exist ({remote_org_exist}) not exist'
                                 f'\nor remote_dest_exist ({remote_dest_exist}) not exist'
                                 '\nAbort!!!')
 
-                    log.inf(f"checkout {args.branch_to}")
+                    i_logger.inf(f"checkout {args.branch_to}")
                     project.git(['checkout', args.branch_to, "--"], check=False)
                     if local_dest_exist:
-                        log.dbg(f"pull {args.branch_to}")
+                        i_logger.dbg(f"pull {args.branch_to}")
                         project.git(['pull'], check=False)
                     # In regular repo
-                    log.inf(f"merge branch {remote_branch_from} to checkout branch {args.branch_to}")
+                    i_logger.inf(f"merge branch {remote_branch_from} to checkout branch {args.branch_to}")
                     project.git(f"merge {merge_opt} --no-ff --no-edit {remote_branch_from}", check=False)
 
                 # 2. sha merge; take the sha of parent branch - 
@@ -1502,23 +1502,23 @@ class MpvMerge(WestCommand):
                 elif (content == ContentType.SOURCE and
                       merge_method == MergeType.DATA and
                       org_merge_method == MergeType.SOURCE_DATA):
-                    log.inf(f'2. sha merge to repository: {project.name}')
+                    i_logger.inf(f'2. sha merge to repository: {project.name}')
 
-                    log.dbg(f'Take parent sha of branch: {remote_branch_from}')
+                    i_logger.dbg(f'Take parent sha of branch: {remote_branch_from}')
                     sha = project.sha(remote_branch_from)
-                    log.dbg(
+                    i_logger.dbg(
                         f'the revision of project {project.name} in parent branch: {remote_branch_from} is: \n{sha}')
-                    log.dbg(f'current revision in destination branch: {args.branch_to}: \n{dest_project.revision}')
+                    i_logger.dbg(f'current revision in destination branch: {args.branch_to}: \n{dest_project.revision}')
 
-                    log.dbg(f'Check revision of destination')
+                    i_logger.dbg(f'Check revision of destination')
                     if dest_project.revision != sha:
-                        log.dbg(f'Replace revision of project {project.name} with: \n{sha}')
+                        i_logger.dbg(f'Replace revision of project {project.name} with: \n{sha}')
                         dest_project.revision = sha
                         manifest_change = True
-                        log.inf(f'Checkout project {project.name} to sha:\n{sha}')
+                        i_logger.inf(f'Checkout project {project.name} to sha:\n{sha}')
                         project.git(['checkout', '-f', sha], check=False)
                     else:
-                        log.dbg(f'Revision did not change, do not update sha')
+                        i_logger.dbg(f'Revision did not change, do not update sha')
 
                 # 3. Copy revision merge; take the revision name (should be tag or sha) into destination - 
                 #    if in EXTERNAL repository or ALL_PROJECTS repository 
@@ -1526,25 +1526,25 @@ class MpvMerge(WestCommand):
                 #    or SOURCE repository in merge method of DATA 
                 #    and merge method of original branch is DATA
                 else:
-                    log.inf(f'3. Copy revision merge to repository: {project.name}')
-                    log.dbg(
+                    i_logger.inf(f'3. Copy revision merge to repository: {project.name}')
+                    i_logger.dbg(
                         f'revision of parent: {org_project.revision} \nrevision of destination: {dest_project.revision}')
 
                     if org_project.revision != dest_project.revision:
-                        log.dbg(f'Replace revision of project {project.name} with: \n{org_project.revision}')
+                        i_logger.dbg(f'Replace revision of project {project.name} with: \n{org_project.revision}')
                         dest_project.revision = org_project.revision
                         manifest_change = True
-                        log.inf(f'Checkout project {project.name} to org_project.revision:\n{org_project.revision}')
+                        i_logger.inf(f'Checkout project {project.name} to org_project.revision:\n{org_project.revision}')
                         project.git(['checkout', '-f', org_project.revision, "--"], check=False)
                     else:
-                        log.dbg(f'Revision did not change, do not update revision (tag)')
+                        i_logger.dbg(f'Revision did not change, do not update revision (tag)')
         # ### Finish project loop ###
 #
         # Update manifest if required
         if manifest_change == True:
-            log.inf("")
-            log.inf(f'manifest has updates, west.yml should be update in branch: {args.branch_to}')
-            log.dbg(f"dest_manifest AFTER changes: \n{dest_manifest.as_yaml()}")
+            i_logger.inf("")
+            i_logger.inf(f'manifest has updates, west.yml should be update in branch: {args.branch_to}')
+            i_logger.dbg(f"dest_manifest AFTER changes: \n{dest_manifest.as_yaml()}")
             manifest_fd = open(self.manifest.path, "w")
             manifest_fd.write(dest_manifest.as_yaml())
             manifest_fd.close()
@@ -1552,9 +1552,9 @@ class MpvMerge(WestCommand):
                                f"In mpv-merge west command: update west.yml from branch {remote_branch_from} to branche {args.branch_to}"],
                               check=False)
         else:
-            log.dbg(f'manifest did not change. not change west.yml branch in {args.branch_to}')
+            i_logger.dbg(f'manifest did not change. not change west.yml branch in {args.branch_to}')
 
-        log.inf("")
+        i_logger.inf("")
 
 
 class MpvNewProj(WestCommand):
@@ -1628,11 +1628,11 @@ class MpvNewProj(WestCommand):
         return parser
 
     def do_run(self, args, unknown):
-        log.banner(
+        i_logger.banner(
             f'Create new project {args.dest_proj}:{args.dest_ver} from branch {args.source_branch},'
             f'Project type: {args.proj_type}')
 
-        log.dbg(f"args: {args}")
+        i_logger.inf(f"args: {args}")
 
         new_proj(args.source_branch, args.dest_proj, args.dest_ver, args.proj_type,
                  self.manifest, 'mpv-new-proj')
@@ -1700,23 +1700,23 @@ class MpvTag(WestCommand):
         return parser
 
     def do_run(self, args, unknown):
-        log.banner(
+        i_logger.banner(
             f"Create new tag that end with {args.postfix}, with message: {args.message}")
 
-        log.dbg(f"args: {args}")
+        i_logger.inf(f"args: {args}")
 
         manifest_proj = self.manifest.get_projects(['manifest'])[0]
-        log.dbg(f"Update manifest (git pull)")
+        i_logger.dbg(f"Update manifest (git pull)")
         manifest_proj.git('pull', check=False)
 
         # Call to west update build-in command
         ws_rev, bts = get_current_bts(manifest_proj)
-        log.dbg(f"current branch/commit/tag of manifest: {ws_rev}, type of bts: {bts}")
+        i_logger.dbg(f"current branch/commit/tag of manifest: {ws_rev}, type of bts: {bts}")
         
         tag_full = "mpv-tag_" + bts + "-" + ws_rev + "__" + args.postfix
-        log.inf(f"tag name: {tag_full}")
+        i_logger.inf(f"tag name: {tag_full}")
 
-        log.inf(f"Call mpv-update for current revision: {ws_rev}")
+        i_logger.inf(f"Call mpv-update for current revision: {ws_rev}")
         buildin_update_command(self.topdir, self.manifest)
 
         west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
@@ -1727,7 +1727,7 @@ class MpvTag(WestCommand):
             message = "NO USER MESSAGE"
         else:
             message = f"Create by mpv-tag command \nUser message: " + args.message
-        log.dbg(f"tag message: {message}")
+        i_logger.dbg(f"tag message: {message}")
 
         # manifest_proj = self.manifest.get_projects(['manifest'])[0]
         # mpv_str = manifest_proj.read_at("mpv.yml", "HEAD").decode('utf-8')
@@ -1740,20 +1740,20 @@ class MpvTag(WestCommand):
             # for project in self.manifest.projects:
             project = self.manifest.projects[i]
             if project.name == "manifest":
-                log.dbg(f"manifest project - will take care later, continue")
+                i_logger.dbg(f"manifest project - will take care later, continue")
                 i = i + 1
                 continue
             
             mpv_proj = mpv_manifest.get_projects([project.name])[0]
             if mpv_proj == None:
-                log.wrn(f'mpv_proj for project {project.name} is None - continue')
+                i_logger.wrn(f'mpv_proj for project {project.name} is None - continue')
                 i = i + 1
                 continue
             
-            log.dbg(f"project: {project.name}, mpv_proj: {mpv_proj.name}")
+            i_logger.dbg(f"project: {project.name}, mpv_proj: {mpv_proj.name}")
 
-            log.inf('')
-            log.small_banner(f"Project {project.name}:")
+            i_logger.inf('')
+            i_logger.small_banner(f"Project {project.name}:")
             if self.manifest.is_active(project) and project.is_cloned():
                 if mpv_proj.content != ContentType.COMMANDS and mpv_proj.content != ContentType.EXTERNAL:
 
@@ -1763,58 +1763,58 @@ class MpvTag(WestCommand):
                                      capture_stdout=True, capture_stderr=True,
                                      check=False)
                     current_branch = cp.stdout.decode('ascii', errors='ignore').strip()
-                    log.dbg(f"in project: {project.name}, current_branch: current_branch")
-                    log.inf(f"repo: {project.name}, create tag: {tag_full}")
+                    i_logger.dbg(f"in project: {project.name}, current_branch: current_branch")
+                    i_logger.inf(f"repo: {project.name}, create tag: {tag_full}")
                     project.git(['tag', '-f', '-a', tag_full, '-m', message],
                                 check=False)
                     project.git(['push', 'origin', tag_full, '--force'],
                                 check=False)
                     manifest_update.projects[i].revision = tag_full
                 else:
-                    log.dbg(f"Project {project.name} is infrastructure project - don't create specific tag")
+                    i_logger.dbg(f"Project {project.name} is infrastructure project - don't create specific tag")
             else:
-                log.inf(f"Project {project.name} is not active or not cloned")
+                i_logger.inf(f"Project {project.name} is not active or not cloned")
             i = i + 1
 
         
         manifest_fd = open(self.manifest.path, "w+")
         manifest_fd.seek(0)
-        log.dbg(f"west.yml after open it with w+: \n{manifest_fd.read()}")
+        i_logger.dbg(f"west.yml after open it with w+: \n{manifest_fd.read()}")
 #         manifest_fd.seek(0)
 #        manifest_fd.truncate()
-        log.dbg(f"----------------------------------------")
-        log.dbg(f"mpv-tag - write new west.yml: \n{manifest_update.as_yaml()}")
+        i_logger.dbg(f"----------------------------------------")
+        i_logger.dbg(f"mpv-tag - write new west.yml: \n{manifest_update.as_yaml()}")
         manifest_fd.write(manifest_update.as_yaml())
         manifest_fd.seek(0)
-        log.dbg(f"west.yml after writing it it with w+: \n{manifest_fd.read()}")
+        i_logger.dbg(f"west.yml after writing it it with w+: \n{manifest_fd.read()}")
 #        manifest_fd.seek(0)
         manifest_fd.close()
 
         manifest_proj.git(['commit', '-a', '-m',
                            f"mpv-tag - set west.yml with tag {tag_full}"],
                           check=False)
-        log.inf(f"tag project {manifest_proj.name} with tag: {tag_full}")
+        i_logger.inf(f"tag project {manifest_proj.name} with tag: {tag_full}")
         manifest_proj.git(['tag', '-f', '-a', tag_full, '-m', message],
                           check=False)
         if bts == "br":
-            log.inf(f"Create new commit with the previous west.yml")
+            i_logger.inf(f"Create new commit with the previous west.yml")
             manifest_fd = open(self.manifest.path, "w+")
             # manifest_fd.seek(0)
             # manifest_fd.truncate()
             manifest_fd.seek(0)
-            log.dbg(f"previous branch, west.yml after open it with w+: \n{manifest_fd.read()}")
-            log.dbg(f"----------------------------------------")
-            log.dbg(f"mpv-tag - write new west.yml: \n{manifest_update.as_yaml()}")
+            i_logger.dbg(f"previous branch, west.yml after open it with w+: \n{manifest_fd.read()}")
+            i_logger.dbg(f"----------------------------------------")
+            i_logger.dbg(f"mpv-tag - write new west.yml: \n{manifest_update.as_yaml()}")
             manifest_fd.write(west_str)
 #           manifest_fd.seek(0)
             manifest_fd.seek(0)
-            log.dbg(f"previous branch, west.yml after writing it it with w+: \n{manifest_fd.read()}")
+            i_logger.dbg(f"previous branch, west.yml after writing it it with w+: \n{manifest_fd.read()}")
             manifest_fd.close()
             manifest_proj.git(['commit', '-a', '-m',
                                f"mpv-tag - return to previous west.yml, before create the tag: {tag_full}"],
                               check=False)
 
-        log.inf(f"Push tag {tag_full}, for project {manifest_proj.name}")
+        i_logger.inf(f"Push tag {tag_full}, for project {manifest_proj.name}")
         manifest_proj.git(['push', 'origin', tag_full, '--force'],
                           check=False)
         manifest_proj.git(['push'],
@@ -1880,7 +1880,7 @@ class MpvInit(WestCommand):
 
     def do_run(self, args, _):
         # 1. Update all repositories (west mpv-update)
-        log.banner("1. Call to mpv-update")
+        i_logger.banner("1. Call to mpv-update")
         mpv_update_cmnd = MpvUpdate()
         update_cmnd_parser = argparse.ArgumentParser(description='dummy parser to mpv-update command')
         update_cmnd_parser.add_argument('-v', '--verbose', default=0, action='count')
@@ -1889,17 +1889,17 @@ class MpvInit(WestCommand):
         subparser_gen = update_cmnd_parser.add_subparsers(metavar='<command>', dest='command')
         mpv_update_cmnd.add_parser(subparser_gen)
         update_args = update_cmnd_parser.parse_args(['mpv-update', '--full-clone'])
-        # log.dbg(f"unknown: {unknown}")
-        log.inf("Call west mpv-update command:")
+        # i_logger.dbg(f"unknown: {unknown}")
+        i_logger.inf("Call west mpv-update command:")
         mpv_update_cmnd.run(update_args, None, self.topdir, self.manifest)
 
         # 2. Create branches from the version exist in west.yml
-        log.banner("2. Create new branches to project")
+        i_logger.banner("2. Create new branches to project")
         # mpv_main_str = self.manifest.projects[0].read_at("mpv.yml", 'main').decode('utf-8')
-        # log.dbg(f"ManifestMpv of main: \n{mpv_main_str}")
+        # i_logger.dbg(f"ManifestMpv of main: \n{mpv_main_str}")
         # mpv_main_manifest = ManifestMpv.from_data(mpv_main_str)
         # project_name = mpv_main_manifest.self_mpv.project_name
-        # log.dbg(f"project_name (from mpv.yml): {project_name}")
+        # i_logger.dbg(f"project_name (from mpv.yml): {project_name}")
         new_proj("main", args.project_name, args.first_version, 's',
                  self.manifest, 'mpv-init')
 
@@ -1977,8 +1977,8 @@ class MpvManifest(WestCommand):
 
 
     def do_run(self, args, unknown):
-        log.banner(f'Update manifest')
-        log.dbg(f"args: {args}")
+        i_logger.banner(f'Update manifest')
+        i_logger.dbg(f"args: {args}")
 
         # TODO: Call fetch --prune for all projects to remove deleted remote branches
 
@@ -1993,32 +1993,32 @@ class MpvManifest(WestCommand):
         Add Fields to the manifest
         """
         if len(args.add) <= 0:
-            log.die("No fields to add. Please specify fields using -a flag.")
+            i_logger.die("No fields to add. Please specify fields using -a flag.")
 
         # Get the mpv branches
         manifest_proj: manifest.Manifest = self.manifest.get_projects(['manifest'])[0]
 
         default_branch = get_remote_default_branch(manifest_proj)
-        log.dbg(f"default_branch: {default_branch}")
+        i_logger.dbg(f"default_branch: {default_branch}")
 
         current_manifest_branches = mpv_branches(manifest_proj)
-        log.dbg(f"current_manifest_branches: {current_manifest_branches}")
+        i_logger.dbg(f"current_manifest_branches: {current_manifest_branches}")
 
         all_branches = current_manifest_branches.copy()
         all_branches.append(default_branch)
-        log.dbg(f"all_branches: {all_branches}")
+        i_logger.dbg(f"all_branches: {all_branches}")
         
         for branch in all_branches:
             branch = os.path.basename(branch)
-            log.dbg(f"After remove origin from branch name branch is: {branch}.")
-            log.dbg(f"Checkout manifest to branch: {branch}.")
+            i_logger.dbg(f"After remove origin from branch name branch is: {branch}.")
+            i_logger.dbg(f"Checkout manifest to branch: {branch}.")
             manifest_proj.git(['checkout', branch, "--"])
             manifest_proj.git(['pull'])
 
-            log.dbg(f"Load west.yml current branch: {branch}.")
+            i_logger.dbg(f"Load west.yml current branch: {branch}.")
             current_branch_west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
             current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, import_flags=ImportFlag.IGNORE)
-            log.dbg(f"current_branch_west_manifest.as_dict(): \n{current_branch_west_manifest.as_dict()}.")
+            i_logger.dbg(f"current_branch_west_manifest.as_dict(): \n{current_branch_west_manifest.as_dict()}.")
 
             projects_list = current_branch_west_manifest.projects
 
@@ -2036,17 +2036,17 @@ class MpvManifest(WestCommand):
                         field_name = repo_field_list[1]
                         field_value = repo_field_list[2]
                         proj_dic[field_name] = field_value
-                        log.dbg(f"Update field {field_name} in {proj.name} to {field_value}.")
-                        log.dbg(f"current proj_dic: {proj_dic}")
+                        i_logger.dbg(f"Update field {field_name} in {proj.name} to {field_value}.")
+                        i_logger.dbg(f"current proj_dic: {proj_dic}")
                         # TODO: Validate the updated project against the schema
                         # temp_validation = {'projects' : [proj_dic]}
-                        # log.dbg(f"temp_validation: \n{temp_validation}.")
+                        # i_logger.dbg(f"temp_validation: \n{temp_validation}.")
                         # pykwalify.core.Core(source_data=temp_validation,
                         #     schema_files=[manifest._SCHEMA_PATH]).validate()
 
                 if project_change == True:
-                    log.dbg(f"Update manifest repo {proj.name} in branch: {branch}.")
-                    log.dbg(f"The new project is repo is: \n{proj}")
+                    i_logger.dbg(f"Update manifest repo {proj.name} in branch: {branch}.")
+                    i_logger.dbg(f"The new project is repo is: \n{proj}")
                     new_proj = manifest.Project(proj.name, proj.url, 
                         # description=proj_dic.get('description'),
                         revision=proj_dic.get('revision'),
@@ -2061,26 +2061,26 @@ class MpvManifest(WestCommand):
                         )
 
                     projects_list[i] = new_proj
-                    log.dbg(f"new repo {new_proj.name} in branch: {branch}:\n{new_proj}")
-                    # log.dbg(f"new repo {proj_dic['name']} in branch: {branch}:\n{proj_dic}")
+                    i_logger.dbg(f"new repo {new_proj.name} in branch: {branch}:\n{new_proj}")
+                    # i_logger.dbg(f"new repo {proj_dic['name']} in branch: {branch}:\n{proj_dic}")
                     manifest.validate(current_branch_west_manifest.as_dict())
                 
                 i = i+1
             
-            log.dbg(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
+            i_logger.dbg(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
 
             if args.dr == False:
-                log.dbg(f"----------------------------------------")
+                i_logger.dbg(f"----------------------------------------")
                 west_file = self.manifest.path
-                log.dbg(f"west_file: {west_file}. branch: {branch}")
+                i_logger.dbg(f"west_file: {west_file}. branch: {branch}")
                 west_file_fd = open(west_file, "r+")
-                log.dbg(f"west_file BEFORE change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
-                # log.inf(f"update west.yml, branch: {branch} yaml: \n {manifest_obj.as_yaml()}\n")
+                i_logger.dbg(f"west_file BEFORE change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                # i_logger.inf(f"update west.yml, branch: {branch} yaml: \n {manifest_obj.as_yaml()}\n")
                 west_file_fd.seek(0)
                 west_file_fd.truncate()
                 west_file_fd.write(current_branch_west_manifest.as_yaml())
                 west_file_fd.seek(0)
-                log.dbg(f"west_file AFTER change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                i_logger.dbg(f"west_file AFTER change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
                 west_file_fd.close()
 
                 manifest_proj.git(['add','west.yml'],
@@ -2090,10 +2090,10 @@ class MpvManifest(WestCommand):
                 manifest_proj.git(['push', 'origin', f"{branch}"], check=False)
 
             else:
-                log.inf(f"Dry run: in branch {branch}, the west.yml and mpv.yml should be commit and push")
+                i_logger.inf(f"Dry run: in branch {branch}, the west.yml and mpv.yml should be commit and push")
 
 
-            log.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
+            i_logger.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
 
 
 
@@ -2103,58 +2103,58 @@ class MpvManifest(WestCommand):
 
         # 1.1 Get new west
         new_west_filename = manifest_folder.joinpath("west.yml")
-        log.dbg(f'get west.yml from file: {new_west_filename}')
+        i_logger.dbg(f'get west.yml from file: {new_west_filename}')
         new_west_str = new_west_filename.read_text()
         new_west_manifest = manifest.Manifest.from_data(new_west_str, import_flags=ImportFlag.IGNORE)
-        log.dbg(f"new_west_manifest:\n{new_west_manifest.as_yaml()}")
-        # log.dbg(f"new_west_manifest from file {new_west_filename}: \n{new_west_manifest.as_yaml()}\n")
+        i_logger.dbg(f"new_west_manifest:\n{new_west_manifest.as_yaml()}")
+        # i_logger.dbg(f"new_west_manifest from file {new_west_filename}: \n{new_west_manifest.as_yaml()}\n")
         new_west_projects_set = project_set_4_compare(new_west_manifest)
-        log.dbg(f"new_west_projects_set: {new_west_projects_set}\n")
+        i_logger.dbg(f"new_west_projects_set: {new_west_projects_set}\n")
         new_projects_names_in_west = set(proj[0] for proj in new_west_projects_set)
-        log.dbg(f"new_projects_names_in_west: {new_projects_names_in_west}\n")
+        i_logger.dbg(f"new_projects_names_in_west: {new_projects_names_in_west}\n")
 
         # 1.2 Get new mpv
         new_mpv_filename = manifest_folder.joinpath("mpv.yml")
-        log.dbg(f'get mpv.yml from file: {new_mpv_filename}')
+        i_logger.dbg(f'get mpv.yml from file: {new_mpv_filename}')
         new_mpv_str = new_mpv_filename.read_text()
         new_mpv_manifest = ManifestMpv.from_data(new_mpv_str, topdir=self.manifest.topdir)
-        # log.dbg(f"new_mpv_manifest from file {new_mpv_filename}: \n{new_mpv_manifest.as_yaml()}\n")
+        # i_logger.dbg(f"new_mpv_manifest from file {new_mpv_filename}: \n{new_mpv_manifest.as_yaml()}\n")
         new_mpv_projects_set = mpv_set_4_compare(new_mpv_manifest)
         #new_mpv_projects_set = set(new_mpv_manifest.projects)
-        log.dbg(f"new_mpv_projects_set: {new_mpv_projects_set}\n")
+        i_logger.dbg(f"new_mpv_projects_set: {new_mpv_projects_set}\n")
         new_projects_names_in_mpv = set(proj[0] for proj in new_mpv_projects_set)
-        log.dbg(f"new_projects_names_in_mpv: {new_projects_names_in_mpv}\n")
+        i_logger.dbg(f"new_projects_names_in_mpv: {new_projects_names_in_mpv}\n")
 
         # Check if mpv.yml and west.yml have difference
         # (^ is for symmetric difference between both sets - item that are not union)
         sym_diff_new = new_projects_names_in_west ^ new_projects_names_in_mpv
-        log.dbg(f"sym_diff_new: {sym_diff_new}\n")
+        i_logger.dbg(f"sym_diff_new: {sym_diff_new}\n")
         if len(sym_diff_new) > 0 and list(sym_diff_new)[0] != 'manifest':
-            log.die(f"There are difference between west.yml and mpv.yml, sym_diff_new: {sym_diff_new}")
+            i_logger.die(f"There are difference between west.yml and mpv.yml, sym_diff_new: {sym_diff_new}")
 
         # 1.3 Get default branch
         manifest_proj = self.manifest.get_projects(['manifest'])[0]
         default_branch = get_remote_default_branch(manifest_proj)
-        log.dbg(f"default_branch: {default_branch}")
+        i_logger.dbg(f"default_branch: {default_branch}")
 
         # 1.4 Get current west
-        log.dbg(f'get west.yml from default_branch: origin/{default_branch}')
+        i_logger.dbg(f'get west.yml from default_branch: origin/{default_branch}')
         current_west_str = manifest_proj.read_at("west.yml", f"origin/{default_branch}").decode('utf-8')
         current_west_manifest = manifest.Manifest.from_data(current_west_str, import_flags=ImportFlag.IGNORE)
-        # log.dbg(f"current_west_manifest from branch {default_branch}: \n{current_west_manifest.as_yaml()}")
+        # i_logger.dbg(f"current_west_manifest from branch {default_branch}: \n{current_west_manifest.as_yaml()}")
         current_west_projects_set = project_set_4_compare(current_west_manifest)
-        log.dbg(f"current_west_projects_set: {current_west_projects_set}\n")
+        i_logger.dbg(f"current_west_projects_set: {current_west_projects_set}\n")
         current_projects_names_in_west = set(proj[0] for proj in current_west_projects_set)
-        log.dbg(f"current_projects_names_in_west: {current_projects_names_in_west}")
+        i_logger.dbg(f"current_projects_names_in_west: {current_projects_names_in_west}")
 
         # 1.5 Get current mpv
-        log.dbg(f'get mpv.yml from default_branch: origin/{default_branch}')
+        i_logger.dbg(f'get mpv.yml from default_branch: origin/{default_branch}')
         current_mpv_str = manifest_proj.read_at("mpv.yml", f"origin/{default_branch}").decode('utf-8')
         current_mpv_manifest = ManifestMpv.from_data(current_mpv_str, topdir=self.manifest.topdir)
-        # log.dbg(f'current_mpv_manifest from branch {default_branch}: \n{current_mpv_manifest.as_yaml()}\n')
+        # i_logger.dbg(f'current_mpv_manifest from branch {default_branch}: \n{current_mpv_manifest.as_yaml()}\n')
         current_mpv_projects_set = mpv_set_4_compare(current_mpv_manifest)
         current_projects_names_in_mpv = set(proj[0] for proj in current_mpv_projects_set)
-        log.dbg(f"current_projects_names_in_mpv: {current_projects_names_in_mpv}\n")
+        i_logger.dbg(f"current_projects_names_in_mpv: {current_projects_names_in_mpv}\n")
 
 
         # 2. Compare the current west.yml and mpv.yml with the new one,
@@ -2162,31 +2162,31 @@ class MpvManifest(WestCommand):
 
         # 2.1 Find new and change project from west.yml
         new_change_projects_in_west = new_west_projects_set - current_west_projects_set
-        log.dbg(f"new_change_projects_in_west: {new_change_projects_in_west}\n")
+        i_logger.dbg(f"new_change_projects_in_west: {new_change_projects_in_west}\n")
         new_change_projects_names_in_west = set(proj[0] for proj in new_change_projects_in_west)
-        log.dbg(f"new_change_projects_names_in_west: {new_change_projects_names_in_west}\n")
+        i_logger.dbg(f"new_change_projects_names_in_west: {new_change_projects_names_in_west}\n")
 
         # 2.2 Find new and change project from mpv.yml
         new_change_projects_in_mpv = new_mpv_projects_set - current_mpv_projects_set
-        log.dbg(f"new_change_projects_in_mpv: {new_change_projects_in_mpv}\n")
+        i_logger.dbg(f"new_change_projects_in_mpv: {new_change_projects_in_mpv}\n")
         new_change_projects_names_in_mpv = set(proj[0] for proj in new_change_projects_in_mpv)
-        log.dbg(f"new_change_projects_names_in_mpv: {new_change_projects_names_in_mpv}\n")
+        i_logger.dbg(f"new_change_projects_names_in_mpv: {new_change_projects_names_in_mpv}\n")
         
         delete_project_names_in_west = current_projects_names_in_west - new_change_projects_names_in_west - new_projects_names_in_west
-        log.dbg(f"delete_project_names_in_west: {delete_project_names_in_west}")
+        i_logger.dbg(f"delete_project_names_in_west: {delete_project_names_in_west}")
         
         delete_project_names_in_mpv = current_projects_names_in_mpv - new_change_projects_names_in_mpv - new_projects_names_in_mpv
-        log.dbg(f"delete_project_names_in_mpv: {delete_project_names_in_mpv}")
+        i_logger.dbg(f"delete_project_names_in_mpv: {delete_project_names_in_mpv}")
 
         only_new_project_names_in_new_west = new_projects_names_in_west - current_projects_names_in_west
-        log.dbg(f"only_new_project_names_in_new_west: {only_new_project_names_in_new_west}")
+        i_logger.dbg(f"only_new_project_names_in_new_west: {only_new_project_names_in_new_west}")
         
         # 3 Check all the changes in all repos
         actions = dict()
         
-        log.inf(f"\n\nGo over all new and change project, and check the changes:\n")
+        i_logger.inf(f"\n\nGo over all new and change project, and check the changes:\n")
         for proj_name in new_change_projects_names_in_west:
-            log.dbg(f"\nTake care to project: {proj_name}")
+            i_logger.dbg(f"\nTake care to project: {proj_name}")
             # Check the type of the new project in mpv
             new_project_mpv = new_mpv_manifest.get_projects([proj_name])[0]
             new_project_type = new_project_mpv.content
@@ -2194,21 +2194,21 @@ class MpvManifest(WestCommand):
                 
             # Take care to new projects
             if proj_name not in current_projects_names_in_west:
-                log.dbg(f"Project {proj_name} is a new project of type {new_project_type}")
+                i_logger.dbg(f"Project {proj_name} is a new project of type {new_project_type}")
 
                 # For repos that only the west.yml and mpv.yml should be update,
                 # inform the user:
-                log.inf(f"New project {proj_name} of type {new_project_type}")
+                i_logger.inf(f"New project {proj_name} of type {new_project_type}")
                 
                 if new_project_type == ContentType.DATA:
-                    log.dbg(f"Take action NEW_DATA_PROJ for project {proj_name}")
+                    i_logger.dbg(f"Take action NEW_DATA_PROJ for project {proj_name}")
                     actions[proj_name].append(ManifestActionType.NEW_DATA_PROJ)
 
                 elif new_project_type == ContentType.SOURCE:
-                    log.dbg(f"Take action NEW_SOURCE_PROJ for project {proj_name}")
+                    i_logger.dbg(f"Take action NEW_SOURCE_PROJ for project {proj_name}")
                     actions[proj_name].append(ManifestActionType.NEW_SOURCE_PROJ)
                 else:
-                    log.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name}")
+                    i_logger.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name}")
                     actions[proj_name].append(ManifestActionType.NEW_OTHER_PROJ)
                 
 
@@ -2222,15 +2222,15 @@ class MpvManifest(WestCommand):
             # 6. command
             # 7. nested
             else:
-                log.dbg(f"Project {proj_name} is a project of type {new_project_type} that have changes")
-                log.dbg(f"Check the changes for project {proj_name}")
+                i_logger.dbg(f"Project {proj_name} is a project of type {new_project_type} that have changes")
+                i_logger.dbg(f"Check the changes for project {proj_name}")
 
                 # 1. mpv type
                 current_project_mpv = current_mpv_manifest.get_projects([proj_name])[0]
                 current_project_type = current_project_mpv.content
                 if current_project_type != new_project_type:
-                    log.dbg(f"Project {proj_name} has change in mpv")
-                    log.dbg(f"Project {proj_name}: current_project_type: {current_project_type}. new_project_type: {new_project_type}")
+                    i_logger.dbg(f"Project {proj_name} has change in mpv")
+                    i_logger.dbg(f"Project {proj_name}: current_project_type: {current_project_type}. new_project_type: {new_project_type}")
                     actions[proj_name].append(ManifestActionType.CHANGE_MPV)
                 
                 new_project_west = new_west_manifest.get_projects([proj_name])[0]
@@ -2238,45 +2238,45 @@ class MpvManifest(WestCommand):
 
                 # 2. url                
                 if current_project_west.url != new_project_west.url:
-                    log.dbg(f"Project {proj_name} has change in url")
-                    log.dbg(f"Project {proj_name}: current url: {current_project_west.url}. new url: {new_project_west.url}")
+                    i_logger.dbg(f"Project {proj_name} has change in url")
+                    i_logger.dbg(f"Project {proj_name}: current url: {current_project_west.url}. new url: {new_project_west.url}")
                     actions[proj_name].append(ManifestActionType.CHANGE_URL)
                 
                 # 3. revision (for COMMAND repo)
                 if current_project_west.revision != new_project_west.revision and current_project_west.west_commands != None:
-                    log.dbg(f"Project {proj_name} has change in revision in command repo")
-                    log.dbg(f"Project {proj_name}: current revision: {current_project_west.revision}. new revision: {new_project_west.revision}")
+                    i_logger.dbg(f"Project {proj_name} has change in revision in command repo")
+                    i_logger.dbg(f"Project {proj_name}: current revision: {current_project_west.revision}. new revision: {new_project_west.revision}")
                     actions[proj_name].append(ManifestActionType.CHANGE_REVISION)
                 
                 # 4. groups 
                 set_current_groups = set(current_project_west.groups)
                 set_new_groups = set(new_project_west.groups)
                 if set_current_groups != set_new_groups:
-                    log.dbg(f"Project {proj_name} has change in groups ")
-                    log.dbg(f"Project {proj_name}: current groups: {set_current_groups}. new group: {set_new_groups}")
+                    i_logger.dbg(f"Project {proj_name} has change in groups ")
+                    i_logger.dbg(f"Project {proj_name}: current groups: {set_current_groups}. new group: {set_new_groups}")
                     actions[proj_name].append(ManifestActionType.CHANGE_GROUPS)
 
                 # 5. path
                 if current_project_west.path != new_project_west.path: 
-                    log.dbg(f"Project {proj_name} has change in path")
-                    log.dbg(f"Project {proj_name}: current path: {current_project_west.path}. new path: {new_project_west.path}")
+                    i_logger.dbg(f"Project {proj_name} has change in path")
+                    i_logger.dbg(f"Project {proj_name}: current path: {current_project_west.path}. new path: {new_project_west.path}")
                     actions[proj_name].append(ManifestActionType.CHANGE_PATH)
             
                 # 6. command
                 if current_project_west.west_commands != new_project_west.west_commands: 
-                    log.dbg(f"Project {proj_name} has change in command")
-                    log.dbg(f"Project {proj_name}: current commands: {current_project_west.west_commands}. new commands: {new_project_west.west_commands}")
+                    i_logger.dbg(f"Project {proj_name} has change in command")
+                    i_logger.dbg(f"Project {proj_name}: current commands: {current_project_west.west_commands}. new commands: {new_project_west.west_commands}")
                     actions[proj_name].append(ManifestActionType.CHANGE_COMMAND)
 
                 # 7. TODO: nested (Should check the west.yml itself)
                 # if current_project_west.west_commands != new_project_west.west_commands: 
-                    # log.dbg(f"Project {proj_name} has change in command")
-                    # log.dbg(f"Project {proj_name}: current commands: {current_project_west.west_commands}. new commands: {new_project_west.west_commands}")
+                    # i_logger.dbg(f"Project {proj_name} has change in command")
+                    # i_logger.dbg(f"Project {proj_name}: current commands: {current_project_west.west_commands}. new commands: {new_project_west.west_commands}")
                     # actions[proj_name] = actions[proj_name] | ManifestActionType.CHANGE_TO_NESTED
 
         # Check if there are changes and continue, or exit
         if len(delete_project_names_in_west) == 0 and len(delete_project_names_in_mpv) == 0 and len(actions) == 0:
-            log.die(f"\nThere is no any update - exit")
+            i_logger.die(f"\nThere is no any update - exit")
 
         
 
@@ -2284,68 +2284,68 @@ class MpvManifest(WestCommand):
         # 4 Perform the actions (if dry run - only inform user)
         
         # First, clone the new repos
-        log.inf(f"\n\nClone the new repos")
+        i_logger.inf(f"\n\nClone the new repos")
         new_proj_list = list(only_new_project_names_in_new_west)
-        log.dbg(f"The new repos to clone: {new_proj_list}")
+        i_logger.dbg(f"The new repos to clone: {new_proj_list}")
         buildin_update_command(self.topdir, new_west_manifest, new_proj_list)
         
-        log.dbg(f"Fetch the new repos: {new_proj_list}")
+        i_logger.dbg(f"Fetch the new repos: {new_proj_list}")
         for proj_new in new_proj_list:
             proj_obj = new_west_manifest.get_projects([proj_new])[0]
-            log.dbg(f"Fetch repos: {proj_new}")
+            i_logger.dbg(f"Fetch repos: {proj_new}")
             proj_obj.git(['fetch'])
 
         # 4.1 Copy west.yml and mpv.yml to default branch
-        log.inf(f"\n-----------------------------------------------------")
-        log.inf(f"Update west.yml and mpv.yml in default branch")
+        i_logger.inf(f"\n-----------------------------------------------------")
+        i_logger.inf(f"Update west.yml and mpv.yml in default branch")
         if args.dr == False:
             manifest_proj.git(['checkout', default_branch, "--"])
 
             des_west_file = self.manifest.path
-            log.dbg(f"des_west_file: {des_west_file}")
+            i_logger.dbg(f"des_west_file: {des_west_file}")
             shutil.copyfile(new_west_filename, des_west_file)
             des_west_file_fd = open(des_west_file, "r")
-            log.dbg(f"des_west_file: {des_west_file} - \n{des_west_file_fd.read()}")
+            i_logger.dbg(f"des_west_file: {des_west_file} - \n{des_west_file_fd.read()}")
             des_west_file_fd.close()
 
             des_mpv_file = des_west_file.replace('west.yml', 'mpv.yml')
-            log.dbg(f"des_mpv_file: {des_mpv_file}")
+            i_logger.dbg(f"des_mpv_file: {des_mpv_file}")
             shutil.copyfile(new_mpv_filename, des_mpv_file)
             des_mpv_file_fd = open(des_mpv_file, "r")
-            log.dbg(f"des_mpv_file: {des_mpv_file} - \n{des_mpv_file_fd.read()}")
+            i_logger.dbg(f"des_mpv_file: {des_mpv_file} - \n{des_mpv_file_fd.read()}")
             des_mpv_file_fd.close()
             
             manifest_proj.git(['add', 'mpv.yml', 'west.yml'])
             manifest_proj.git(['commit', '-m',
                                f'Update new west.yml and mpv.yml in default branch {default_branch}. Automatic update by running the command west mpv-manifest'])
             manifest_proj.git(['push', 'origin', f"{default_branch}"])
-            log.dbg(f"Finish commit")
+            i_logger.dbg(f"Finish commit")
         else:
-            log.inf(f"Dry run: branch {default_branch} should be updated with west.yml and mpv.yml from {manifest_folder}\n")
+            i_logger.inf(f"Dry run: branch {default_branch} should be updated with west.yml and mpv.yml from {manifest_folder}\n")
 
         # 4.2 Update west.yml and mpv.yml in all mpv branches
-        log.dbg(f"\n\nAll actions are: {actions}")
-        log.inf("Over all branches and update according to update manifests")
+        i_logger.dbg(f"\n\nAll actions are: {actions}")
+        i_logger.inf("Over all branches and update according to update manifests")
         current_manifest_branches = mpv_branches(manifest_proj)
-        log.dbg(f"current_manifest_branches: {current_manifest_branches}")
+        i_logger.dbg(f"current_manifest_branches: {current_manifest_branches}")
         
         for branch in current_manifest_branches:
-            log.dbg(f"Check if to update manifest of branch {branch}.")
+            i_logger.dbg(f"Check if to update manifest of branch {branch}.")
             branch = os.path.basename(branch)
-            log.dbg(f"After remove origin from branch name branch is: {branch}.")
+            i_logger.dbg(f"After remove origin from branch name branch is: {branch}.")
 
             addition_actions = dict()
             
             # 4.2.1. Take current west.yml and mpv.yml
-            log.dbg(f"Checkout manifest to branch: {branch}.")
+            i_logger.dbg(f"Checkout manifest to branch: {branch}.")
             manifest_proj.git(['checkout', branch, "--"])
             manifest_proj.git(['pull'])
 
-            log.dbg(f"Load west.yml current branch: {branch}.")
+            i_logger.dbg(f"Load west.yml current branch: {branch}.")
             current_branch_west_str = manifest_proj.read_at("west.yml", "HEAD").decode('utf-8')
             current_branch_west_manifest = manifest.Manifest.from_data(current_branch_west_str, import_flags=ImportFlag.IGNORE)
 
-            log.dbg(f"Load mpv.yml current branch: {branch}.")
+            i_logger.dbg(f"Load mpv.yml current branch: {branch}.")
             current_branch_mpv_str = manifest_proj.read_at("mpv.yml", "HEAD").decode('utf-8')
             current_branch_mpv_manifest = ManifestMpv.from_data(current_branch_mpv_str, topdir=self.manifest.topdir)
 
@@ -2355,33 +2355,33 @@ class MpvManifest(WestCommand):
             # in west.yml and mpv.yml.
             # Only warn if there is a problem
             current_branch_west_projects_set = project_set_4_compare(current_branch_west_manifest)
-            log.dbg(f"current_branch_west_projects_set (branch: {branch}): {current_branch_west_projects_set}\n")
+            i_logger.dbg(f"current_branch_west_projects_set (branch: {branch}): {current_branch_west_projects_set}\n")
             current_branch_projects_names_in_west = set(proj[0] for proj in current_branch_west_projects_set)
-            log.dbg(f"current_branch_projects_names_in_west (branch: {branch}): {current_branch_projects_names_in_west}\n")
+            i_logger.dbg(f"current_branch_projects_names_in_west (branch: {branch}): {current_branch_projects_names_in_west}\n")
 
             current_branch_mpv_projects_set = mpv_set_4_compare(current_branch_mpv_manifest)
-            log.dbg(f"current_branch_mpv_projects_set (branch: {branch}): {current_branch_mpv_projects_set}\n")
+            i_logger.dbg(f"current_branch_mpv_projects_set (branch: {branch}): {current_branch_mpv_projects_set}\n")
             current_branch_projects_names_in_mpv = set(proj[0] for proj in current_branch_mpv_projects_set)
-            log.dbg(f"current_branch_projects_names_in_mpv (branch: {branch}): {current_branch_projects_names_in_mpv}\n")
+            i_logger.dbg(f"current_branch_projects_names_in_mpv (branch: {branch}): {current_branch_projects_names_in_mpv}\n")
 
             # Remove from mpv.yml the project that are not exist in west.yml in the current branch
             sym_diff_current_branch = current_branch_projects_names_in_west ^ current_branch_projects_names_in_mpv
-            log.dbg(f"sym_diff_current_branch (branch: {branch}): {sym_diff_current_branch}\n")
+            i_logger.dbg(f"sym_diff_current_branch (branch: {branch}): {sym_diff_current_branch}\n")
             if len(sym_diff_current_branch) > 0 and list(sym_diff_current_branch)[0] != 'manifest':
-                log.wrn(f"There are difference between west.yml and mpv.yml, (branch: {branch}), sym_diff_current_branch: {sym_diff_current_branch}\n")
+                i_logger.wrn(f"There are difference between west.yml and mpv.yml, (branch: {branch}), sym_diff_current_branch: {sym_diff_current_branch}\n")
                 only_in_mpv_current_branch = current_branch_projects_names_in_mpv - current_branch_projects_names_in_west
-                log.dbg(f"Projects that exist in mpv.yml and not in west.yml are (branch: {branch}): {only_in_mpv_current_branch}\n")
+                i_logger.dbg(f"Projects that exist in mpv.yml and not in west.yml are (branch: {branch}): {only_in_mpv_current_branch}\n")
                 if len(only_in_mpv_current_branch) > 0:
                     for only_mpv_proj_name in only_in_mpv_current_branch:
                         mpv_proj_2_remove = current_branch_mpv_manifest.get_projects([only_mpv_proj_name])[0]
-                        log.dbg(f"   Delete repo: name of mpv project to delete: {mpv_proj_2_remove.name}, branch: {branch}")
+                        i_logger.dbg(f"   Delete repo: name of mpv project to delete: {mpv_proj_2_remove.name}, branch: {branch}")
                         current_branch_mpv_manifest.projects.remove(mpv_proj_2_remove)
                     
-                    log.dbg(f"After delete from mpv projects that are not exist in west.yml - update sets. (branch: {branch})\n")
+                    i_logger.dbg(f"After delete from mpv projects that are not exist in west.yml - update sets. (branch: {branch})\n")
                     current_branch_mpv_projects_set = mpv_set_4_compare(current_branch_mpv_manifest)
-                    log.dbg(f"AFTER DELETE UNWANTED PROJECTS: current_branch_mpv_projects_set (branch: {branch}): {current_branch_mpv_projects_set}\n")
+                    i_logger.dbg(f"AFTER DELETE UNWANTED PROJECTS: current_branch_mpv_projects_set (branch: {branch}): {current_branch_mpv_projects_set}\n")
                     current_branch_projects_names_in_mpv = set(proj[0] for proj in current_branch_mpv_projects_set)
-                    log.dbg(f"AFTER DELETE UNWANTED PROJECTS: current_branch_projects_names_in_mpv (branch: {branch}): {current_branch_projects_names_in_mpv}\n")
+                    i_logger.dbg(f"AFTER DELETE UNWANTED PROJECTS: current_branch_projects_names_in_mpv (branch: {branch}): {current_branch_projects_names_in_mpv}\n")
 
     
 
@@ -2389,14 +2389,14 @@ class MpvManifest(WestCommand):
             # Check if mpv.yml and west.yml of current branch is different from default branch 
             # (^ is for symmetric difference between both sets - item that are not union)
             sym_diff_west_current = current_projects_names_in_west ^ current_branch_projects_names_in_west
-            log.dbg(f"\nsym_diff_west_current: {sym_diff_west_current}")
+            i_logger.dbg(f"\nsym_diff_west_current: {sym_diff_west_current}")
             if len(sym_diff_west_current) > 0:
-                log.wrn(f"There are differences between west.yml of default branch and current branch: {branch}")
+                i_logger.wrn(f"There are differences between west.yml of default branch and current branch: {branch}")
 
             sym_diff_mpv_current = current_projects_names_in_mpv ^ current_branch_projects_names_in_mpv
-            log.dbg(f"\nsym_diff_mpv_current: {sym_diff_mpv_current}")
+            i_logger.dbg(f"\nsym_diff_mpv_current: {sym_diff_mpv_current}")
             if len(sym_diff_mpv_current) > 0:
-                log.wrn(f"There are differences between mpv.yml of default branch and current branch: {branch}")
+                i_logger.wrn(f"There are differences between mpv.yml of default branch and current branch: {branch}")
 
             # Add action of new project to the action list,
             # in order to add the project to the current branch.
@@ -2409,25 +2409,25 @@ class MpvManifest(WestCommand):
                 # if the diff repo doesn't exist in current branch west - 
                 # add new action to add it
                 if proj_name_diff not in current_branch_projects_names_in_west:
-                    log.dbg(f"The project {proj_name_diff} only exist in default branch and not in branch: {branch} - add new repo action")
+                    i_logger.dbg(f"The project {proj_name_diff} only exist in default branch and not in branch: {branch} - add new repo action")
                     try:
                         proj_diff_mpv = current_mpv_manifest.get_projects([proj_name_diff])[0]
                         proj_diff_mpv_type = proj_diff_mpv.content
-                        log.dbg(f"Type of repo: {proj_name_diff} is {proj_diff_mpv_type}, branch: {branch}")
+                        i_logger.dbg(f"Type of repo: {proj_name_diff} is {proj_diff_mpv_type}, branch: {branch}")
 
                         addition_actions[proj_name_diff] = list()
                         if proj_diff_mpv_type == ContentType.DATA:
-                            log.dbg(f"Take action NEW_DATA_PROJ for project {proj_name_diff}")
+                            i_logger.dbg(f"Take action NEW_DATA_PROJ for project {proj_name_diff}")
                             addition_actions[proj_name_diff].append(ManifestActionType.NEW_DATA_PROJ)
                         elif proj_diff_mpv_type == ContentType.SOURCE:
-                            log.dbg(f"Take action NEW_SOURCE_PROJ for project {proj_name_diff}")
+                            i_logger.dbg(f"Take action NEW_SOURCE_PROJ for project {proj_name_diff}")
                             addition_actions[proj_name_diff].append(ManifestActionType.NEW_SOURCE_PROJ)
                         else:
-                            log.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name_diff}")
+                            i_logger.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name_diff}")
                             addition_actions[proj_name_diff].append(ManifestActionType.NEW_OTHER_PROJ)        
 
                     except Exception as e:
-                        log.wrn(f"  Failed to add new action. proj_name_diff: {proj_name_diff}, branch: {branch}, Exception: {e}")
+                        i_logger.wrn(f"  Failed to add new action. proj_name_diff: {proj_name_diff}, branch: {branch}, Exception: {e}")
                         continue
 
             ##################################################################
@@ -2437,43 +2437,43 @@ class MpvManifest(WestCommand):
             west_mpv_projects = current_branch_mpv_manifest.projects
             # smpv is MergeType.SOURCE_DATA or MergeType.DATA
             smpv = current_branch_mpv_manifest.self_mpv
-            log.dbg(f"  smpv.merge_method: {smpv.merge_method}, in branch: {branch}")
+            i_logger.dbg(f"  smpv.merge_method: {smpv.merge_method}, in branch: {branch}")
             
             # 4.2.3. If there are repo to delete - delete it from west.yml and mpv.yml
             # Remove west projects that should be deleted 
             west_projects = current_branch_west_manifest.projects
             west_projects_len = len(west_projects)
             i = 0
-            log.dbg(f"  check for delete repos in west.yml in branch: {branch}")
+            i_logger.dbg(f"  check for delete repos in west.yml in branch: {branch}")
             for proj_name_2_delete in delete_project_names_in_west:
                 proj_2_delete = None
                 try:
                     proj_2_delete = current_branch_west_manifest.get_projects([proj_name_2_delete])[0]
                 except Exception as e:
-                    log.wrn(f"The command get_projects to project: {proj_name_2_delete} failed, \nThe project {proj_name_2_delete} mark to be deleted, but not exist in workspace (=current manifest) -> continue, branch: {branch}, Exception: {e}")
+                    i_logger.wrn(f"The command get_projects to project: {proj_name_2_delete} failed, \nThe project {proj_name_2_delete} mark to be deleted, but not exist in workspace (=current manifest) -> continue, branch: {branch}, Exception: {e}")
                     continue
                 
-                log.dbg(f"   Delete repo: {proj_2_delete.name} from current west.yml in branch: {branch}")
+                i_logger.dbg(f"   Delete repo: {proj_2_delete.name} from current west.yml in branch: {branch}")
                 west_projects.remove(proj_2_delete)
                 mpv_proj_2_remove = current_branch_mpv_manifest.get_projects([proj_2_delete.name])[0]
-                log.dbg(f"   Delete repo: name of mpv project to delete: {mpv_proj_2_remove.name}")
+                i_logger.dbg(f"   Delete repo: name of mpv project to delete: {mpv_proj_2_remove.name}")
                 west_mpv_projects.remove(mpv_proj_2_remove)
 
             # 4.2.4. Go over the actions:
-            log.inf(f"\n-----------------------------------------------------")
-            log.inf(f"Go over the all actions. branch: {branch}")
+            i_logger.inf(f"\n-----------------------------------------------------")
+            i_logger.inf(f"Go over the all actions. branch: {branch}")
             merge_actions = {**addition_actions, **actions}
-            log.dbg(f"merge_actions: {merge_actions}, branch: {branch}")
+            i_logger.dbg(f"merge_actions: {merge_actions}, branch: {branch}")
             for proj_name, action_list in merge_actions.items():
-                log.dbg(f"  \nPerfrom actions to {proj_name} in branch: {branch}")
-                log.dbg(f"  Actions of {proj_name}: \n  {action_list}")
+                i_logger.dbg(f"  \nPerfrom actions to {proj_name} in branch: {branch}")
+                i_logger.dbg(f"  Actions of {proj_name}: \n  {action_list}")
                 new_proj = new_west_manifest.get_projects([proj_name])[0]
                 # Save the revision of the new repo, becasue it might change when assignment to c_proj
                 new_proj_revision = new_proj.revision
                 new_mpv_proj = new_mpv_manifest.get_projects([proj_name])[0]
-                log.dbg(f"new_proj: {new_proj}, [proj_name: {proj_name} branch: {branch}] ")
-                log.dbg(f"new_proj revision: {new_proj.revision}, new_proj_revision (original before update  c_proj): {new_proj_revision} [proj_name: {proj_name} branch: {branch}] ")
-                log.dbg(f"new_mpv_proj: {new_mpv_proj}, [proj_name: {proj_name} branch: {branch}] ")
+                i_logger.dbg(f"new_proj: {new_proj}, [proj_name: {proj_name} branch: {branch}] ")
+                i_logger.dbg(f"new_proj revision: {new_proj.revision}, new_proj_revision (original before update  c_proj): {new_proj_revision} [proj_name: {proj_name} branch: {branch}] ")
+                i_logger.dbg(f"new_mpv_proj: {new_mpv_proj}, [proj_name: {proj_name} branch: {branch}] ")
                 
                 change_enum_list = [
                     ManifestActionType.CHANGE_PATH,
@@ -2487,7 +2487,7 @@ class MpvManifest(WestCommand):
                 c_proj = None
                 c_mpv_proj = None
                 for action in action_list:
-                    log.dbg(f"    Take care to action: {action}, in project {proj_name} in branch: {branch}")
+                    i_logger.dbg(f"    Take care to action: {action}, in project {proj_name} in branch: {branch}")
                     if action in change_enum_list:
                         c_proj = current_branch_west_manifest.get_projects([proj_name])[0]
                         c_mpv_proj = current_branch_mpv_manifest.get_projects([proj_name])[0]
@@ -2495,12 +2495,12 @@ class MpvManifest(WestCommand):
                     #  CHANGE_PATH (Update west.yml)
                     if action == ManifestActionType.CHANGE_PATH:
                         c_proj.path = new_proj.path
-                        log.dbg(f"    Update path of poject {proj_name} in branch {branch} to {c_proj.path}, as the path in new poject: {new_proj.path}")
+                        i_logger.dbg(f"    Update path of poject {proj_name} in branch {branch} to {c_proj.path}, as the path in new poject: {new_proj.path}")
 
                     #  CHANGE_URL (Update west.yml)
                     if action == ManifestActionType.CHANGE_URL:
                         c_proj.url = new_proj.url
-                        log.dbg(f"    Update url of poject {proj_name} in branch {branch} to {c_proj.url}, as the url in new poject: {new_proj.url}")
+                        i_logger.dbg(f"    Update url of poject {proj_name} in branch {branch} to {c_proj.url}, as the url in new poject: {new_proj.url}")
 
                     #  CHANGE_REVISION (Update west.yml and mpv.yml - check that mpv type is command)
                     if action == ManifestActionType.CHANGE_REVISION and len(new_proj.west_commands) != 0:
@@ -2508,14 +2508,14 @@ class MpvManifest(WestCommand):
                             c_proj.west_commands = new_proj.west_commands
                             c_proj.revision = new_proj.revision
                             c_mpv_proj.content = new_mpv_proj.content
-                            log.dbg(f"    Update west-command of poject {proj_name} in branch {branch} to west_commands: {c_proj.west_commands}, revision: {c_proj.revision} as the west-command in new poject: {new_proj.west_commands}")
+                            i_logger.dbg(f"    Update west-command of poject {proj_name} in branch {branch} to west_commands: {c_proj.west_commands}, revision: {c_proj.revision} as the west-command in new poject: {new_proj.west_commands}")
                         else:
-                            log.wrn(f"    Try to update west-command of poject {proj_name} in branch {branch} to {c_proj.west_commands}, BUT the mpv content is {new_mpv_proj.content} and not ContentType.COMMANDS")
+                            i_logger.wrn(f"    Try to update west-command of poject {proj_name} in branch {branch} to {c_proj.west_commands}, BUT the mpv content is {new_mpv_proj.content} and not ContentType.COMMANDS")
                         
                     #  CHANGE_GROUPS (Update west.yml)
                     if action == ManifestActionType.CHANGE_GROUPS:
                         c_proj.groups = new_proj.groups
-                        log.dbg(f"    Update groups of poject {proj_name} in branch {branch} to {c_proj.groups}, as the groups in new poject: {new_proj.groups}")
+                        i_logger.dbg(f"    Update groups of poject {proj_name} in branch {branch} to {c_proj.groups}, as the groups in new poject: {new_proj.groups}")
 
                     #  CHANGE_MPV:  
                     #       (If it become Data from Source - create branch in each source repo
@@ -2524,16 +2524,16 @@ class MpvManifest(WestCommand):
                     # orig_mpv_content = c_mpv_proj.content
                     if action == ManifestActionType.CHANGE_MPV:
                         c_mpv_proj.content = new_mpv_proj.content
-                        log.dbg(f"    Update mpv content of poject {proj_name} in branch {branch} to {new_mpv_proj.content}, as the mpv content in new poject: {c_mpv_proj.content}")
+                        i_logger.dbg(f"    Update mpv content of poject {proj_name} in branch {branch} to {new_mpv_proj.content}, as the mpv content in new poject: {c_mpv_proj.content}")
 
                         if c_mpv_proj.content == ContentType.DATA or (c_mpv_proj.content == ContentType.SOURCE and smpv.merge_method == MergeType.SOURCE_DATA):
                             c_proj.revision = branch
-                            log.dbg(f"    DATA or SOURCE with MergeType.SOURCE_DATA repo - Update revision of poject {proj_name} in branch {branch} to {c_proj.revision}")
+                            i_logger.dbg(f"    DATA or SOURCE with MergeType.SOURCE_DATA repo - Update revision of poject {proj_name} in branch {branch} to {c_proj.revision}")
 
                         if c_mpv_proj.content == ContentType.SOURCE and smpv.merge_method == MergeType.DATA:
-                            log.dbg(f"    Try to find sha of revision: {new_proj_revision} [c_proj name: {c_proj.name} branch {branch}]")
+                            i_logger.dbg(f"    Try to find sha of revision: {new_proj_revision} [c_proj name: {c_proj.name} branch {branch}]")
                             c_proj.revision = c_proj.sha(f"origin/{new_proj_revision}")
-                            log.dbg(f"    SOURCE repo with MergeType.DATA - Update revision of poject {proj_name} in branch {branch} to sha: {c_proj.revision}")
+                            i_logger.dbg(f"    SOURCE repo with MergeType.DATA - Update revision of poject {proj_name} in branch {branch} to sha: {c_proj.revision}")
                             
 
                         # If it the content is not source or data update the revision
@@ -2541,7 +2541,7 @@ class MpvManifest(WestCommand):
                         # with the new project of data or source
                         if c_mpv_proj.content != ContentType.DATA and                            c_mpv_proj.content != ContentType.SOURCE:
                             c_proj.revision = new_proj.revision
-                            log.dbg(f"    Also, update revision to {new_proj.revision}, as the revision content in new poject: {c_proj.revision}")
+                            i_logger.dbg(f"    Also, update revision to {new_proj.revision}, as the revision content in new poject: {c_proj.revision}")
                                 
                     # NEW_OTHER_PROJ (Add project to west.yml and mpv.yml)
                     if action == ManifestActionType.NEW_OTHER_PROJ:
@@ -2551,7 +2551,7 @@ class MpvManifest(WestCommand):
                         # west_projects.append(c_proj)
                         add_project_2_manifest(c_proj, current_branch_west_manifest)
                         west_mpv_projects.append(c_mpv_proj)
-                        log.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
+                        i_logger.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
 
                     #  NEW_DATA_PROJ or NEW_SOURCE_PROJ with project type to SOURCE_DATA (Add project to west.yml and mpv.yml,
                     #  and create branch in the new repo)
@@ -2563,20 +2563,20 @@ class MpvManifest(WestCommand):
                         # west_projects.append(c_proj)
                         add_project_2_manifest(c_proj, current_branch_west_manifest)
                         west_mpv_projects.append(c_mpv_proj)
-                        log.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
+                        i_logger.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
 
                     #  NEW_SOURCE_PROJ with project type to DATA (Add project to west.yml and mpv.yml,
                     #  and create branch in the new repo)
                     if action == ManifestActionType.NEW_SOURCE_PROJ and smpv.merge_method == MergeType.DATA:
                         c_proj = new_project(new_proj)
                         c_proj.topdir = self.manifest.topdir
-                        log.dbg(f"    Try to find sha of revision: {new_proj_revision} [c_proj name: {c_proj.name} branch {branch}]")
+                        i_logger.dbg(f"    Try to find sha of revision: {new_proj_revision} [c_proj name: {c_proj.name} branch {branch}]")
                         c_proj.revision = c_proj.sha(f"origin/{new_proj_revision}")
                         c_mpv_proj = new_mpv_proj
                         # west_projects.append(c_proj)
                         add_project_2_manifest(c_proj, current_branch_west_manifest)
                         west_mpv_projects.append(c_mpv_proj)
-                        log.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
+                        i_logger.dbg(f"    Add a new {proj_name} in branch {branch} to west.yml: {c_proj}, and to mpv.yml: {c_mpv_proj}")
 
                     # in the next lines we create new branches in the new repos.
                     # The update should be for NEW data repo or CHANGE to data repo,
@@ -2588,56 +2588,56 @@ class MpvManifest(WestCommand):
                         (action == ManifestActionType.CHANGE_MPV and c_mpv_proj.content == ContentType.DATA) or \
                         (action == ManifestActionType.CHANGE_MPV and c_mpv_proj.content == ContentType.SOURCE and smpv.merge_method == MergeType.SOURCE_DATA):
                         
-                        # log.dbg(f"current_branch_west_manifest.projects: \n{current_branch_west_manifest.projects}\n\n")
-                        # log.dbg(f"current_branch_west_manifest.get_projects(): \n{current_branch_west_manifest.get_projects([])}\n\n")
-                        log.inf(f"Create new branch {branch} in repo {proj_name} from version: origin/{new_proj.revision}")
+                        # i_logger.dbg(f"current_branch_west_manifest.projects: \n{current_branch_west_manifest.projects}\n\n")
+                        # i_logger.dbg(f"current_branch_west_manifest.get_projects(): \n{current_branch_west_manifest.get_projects([])}\n\n")
+                        i_logger.inf(f"Create new branch {branch} in repo {proj_name} from version: origin/{new_proj.revision}")
                         data_proj = current_branch_west_manifest.get_projects([f"{proj_name}"], only_cloned=False)[0]
                         branch_exist = check_branch_exist(data_proj, branch, True)
-                        log.dbg(f"branch_exist: {branch_exist}. branch {branch}")
+                        i_logger.dbg(f"branch_exist: {branch_exist}. branch {branch}")
                         if branch_exist == True:
-                            log.inf(f"In project data {data_proj.name} the branch {branch} exit - dont create again. smpv.merge_method: {smpv.merge_method}")
+                            i_logger.inf(f"In project data {data_proj.name} the branch {branch} exit - dont create again. smpv.merge_method: {smpv.merge_method}")
                         elif args.dr == False:
-                            log.inf(f"In project data {data_proj.name} create the branch {branch}. smpv.merge_method: {smpv.merge_method}")
+                            i_logger.inf(f"In project data {data_proj.name} create the branch {branch}. smpv.merge_method: {smpv.merge_method}")
                             data_proj.git(['branch', branch, f"origin/{new_proj.revision}"],
                             check=False)
                             data_proj.git(['push', '-u', 'origin', branch], check=False)
                         else:
-                            log.inf(f"Dry run: in project data {data_proj.name} the branch {branch} should be created. smpv.merge_method: {smpv.merge_method}")
+                            i_logger.inf(f"Dry run: in project data {data_proj.name} the branch {branch} should be created. smpv.merge_method: {smpv.merge_method}")
 
-                    log.dbg(f"\nFinish take care to action: {action}. project name: {proj_name}  branch: {branch} \n--------------------\n\n")
+                    i_logger.dbg(f"\nFinish take care to action: {action}. project name: {proj_name}  branch: {branch} \n--------------------\n\n")
 
-                log.dbg(f"\nFinish take care to project name: {proj_name}. branch: {branch}\n--------------------\n\n")
+                i_logger.dbg(f"\nFinish take care to project name: {proj_name}. branch: {branch}\n--------------------\n\n")
 
             update_filter_manifest(current_branch_west_manifest)
             
-            log.inf(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
-            log.inf(f"\nmpv.yml after finish to take care to branch: {branch}: \n{current_branch_mpv_manifest.as_yaml()}")
+            i_logger.inf(f"\nwest.yml after finish to take care to branch: {branch}: \n{current_branch_west_manifest.as_yaml()}\n")
+            i_logger.inf(f"\nmpv.yml after finish to take care to branch: {branch}: \n{current_branch_mpv_manifest.as_yaml()}")
 
             if args.dr == False:
-                log.dbg(f"----------------------------------------")
+                i_logger.dbg(f"----------------------------------------")
                 west_file = self.manifest.path
-                log.dbg(f"west_file: {west_file}. branch: {branch}")
+                i_logger.dbg(f"west_file: {west_file}. branch: {branch}")
                 west_file_fd = open(west_file, "r+")
-                log.dbg(f"west_file BEFORE change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
-                # log.inf(f"update west.yml, branch: {branch} yaml: \n {manifest_obj.as_yaml()}\n")
+                i_logger.dbg(f"west_file BEFORE change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                # i_logger.inf(f"update west.yml, branch: {branch} yaml: \n {manifest_obj.as_yaml()}\n")
                 west_file_fd.seek(0)
                 west_file_fd.truncate()
                 west_file_fd.write(current_branch_west_manifest.as_yaml())
                 west_file_fd.seek(0)
-                log.dbg(f"west_file AFTER change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
+                i_logger.dbg(f"west_file AFTER change: {west_file} (branch: {branch})- \n{west_file_fd.read()}")
                 west_file_fd.close()
 
-                log.dbg(f"----------------------------------------")
+                i_logger.dbg(f"----------------------------------------")
                 mpv_file = west_file.replace('west.yml', 'mpv.yml')
-                log.dbg(f"mpv_file: {mpv_file}. branch: {branch}")
+                i_logger.dbg(f"mpv_file: {mpv_file}. branch: {branch}")
                 mpv_file_fd = open(mpv_file, "r+")
-                log.dbg(f"mpv_file BEFORE change: {mpv_file} (branch: {branch})- \n{mpv_file_fd.read()}")
+                i_logger.dbg(f"mpv_file BEFORE change: {mpv_file} (branch: {branch})- \n{mpv_file_fd.read()}")
                 mpv_file_fd.seek(0)
                 mpv_file_fd.truncate()
-                log.inf(f"update mpv.yml, branch: {branch}\n")
+                i_logger.inf(f"update mpv.yml, branch: {branch}\n")
                 mpv_file_fd.write(current_branch_mpv_manifest.as_yaml())
                 mpv_file_fd.seek(0)
-                log.dbg(f"mpv_file AFTER change: {mpv_file} (branch: {branch})- \n{mpv_file_fd.read()}")
+                i_logger.dbg(f"mpv_file AFTER change: {mpv_file} (branch: {branch})- \n{mpv_file_fd.read()}")
                 mpv_file_fd.close()
 
                 manifest_proj.git(['add', 'mpv.yml', 'west.yml'],
@@ -2648,10 +2648,10 @@ class MpvManifest(WestCommand):
 
 
             else:
-                log.inf(f"Dry run: in branch {branch}, the west.yml and mpv.yml should be commit and push")
+                i_logger.inf(f"Dry run: in branch {branch}, the west.yml and mpv.yml should be commit and push")
 
 
-            log.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
+            i_logger.dbg(f"\n\nFinish take care to branch name: {branch}\n--------------------\n\n")
 
         
 
@@ -2681,7 +2681,7 @@ class MpvTemp(WestCommand):
     def do_run(self, args, _):
         # manifest_proj = self.manifest.get_projects(['manifest'])[0]
         # branches = mpv_branches(manifest_proj)
-        # log.dbg(f"branches: {branches}\n\n")
+        # i_logger.dbg(f"branches: {branches}\n\n")
 
         app = WestApp()
         app.run(['-v','update'])
@@ -2691,7 +2691,7 @@ class MpvTemp(WestCommand):
 
         for proj in self.manifest.projects:
             ret = is_tag_branch_commit(proj, "3dc28f85f8b6d80f945114af62759e08b5d1a757")
-            log.inf(f"ret of {proj.name}: {ret}")
+            i_logger.inf(f"ret of {proj.name}: {ret}")
         return 
         
         # git branch  --format="%(if:equals=[gone])%(upstream:track)%(then)%(refname:short)%(end)"
@@ -2703,6 +2703,6 @@ class MpvTemp(WestCommand):
             branch2del = cp.stdout.decode('ascii').strip(' "\n\r').splitlines()
             # Remove empty strings:
             branch2del = list(filter(None, branch2del))
-            log.dbg(f"proj: {proj.name} branch2del: \n{branch2del}")
+            i_logger.dbg(f"proj: {proj.name} branch2del: \n{branch2del}")
 
 
