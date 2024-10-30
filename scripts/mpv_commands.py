@@ -855,7 +855,7 @@ def update_manifest_new_branches(manifest_proj: manifest.Project,
         manifest_proj.git(['add', 'mpv.yml', 'west.yml'],
                           check=False)
         manifest_proj.git(['commit', '-m',
-                           f'Automatic update by running the command "{mpv_command_name}" \nSet west.yml to use {branch_name} branches'],
+                           f'Automatic commit by running the command "{mpv_command_name}" \nSet west.yml to use {branch_name} branches'],
                           check=False)
         manifest_proj.git(['push', '-u', 'origin', f"{branch_name}"],
                           check=False)
@@ -1553,7 +1553,7 @@ class MpvMerge(WestCommand):
             manifest_fd.write(dest_manifest.as_yaml())
             manifest_fd.close()
             manifest_proj.git(['commit', '-a', '-m',
-                               f'Automatic update by running the command "west mpv-merge" \nUpdate west.yml from branch {remote_branch_from} to branches {args.branch_to}'],
+                               f'Automatic commit by running the command "west mpv-merge" \nUpdate west.yml from branch {remote_branch_from} to branches {args.branch_to}'],
                               check=False)
         else:
             i_logger.dbg(f'manifest did not change. not change west.yml branch in {args.branch_to}')
@@ -1799,7 +1799,7 @@ class MpvTag(WestCommand):
         manifest_fd.close()
 
         manifest_proj.git(['commit', '-a', '-m',
-                           f'Automatic update by running the command "west mpv-tag" \nSet west.yml with tag {tag_full}'],
+                           f'Automatic commit by running the command "west mpv-tag" \nSet west.yml with tag {tag_full}'],
                           check=False)
         i_logger.inf(f"tag project {manifest_proj.name} with tag: {tag_full}")
         manifest_proj.git(['tag', '-f', '-a', tag_full, '-m', message],
@@ -1819,7 +1819,7 @@ class MpvTag(WestCommand):
             i_logger.dbg(f"previous branch, west.yml after writing it it with w+: \n{manifest_fd.read()}")
             manifest_fd.close()
             manifest_proj.git(['commit', '-a', '-m',
-                               f'Automatic update by running the command "west mpv-tag" \nReturn to previous west.yml, before create the tag: {tag_full}'],
+                               f'Automatic commit by running the command "west mpv-tag" \nReturn to previous west.yml, before create the tag: {tag_full}'],
                               check=False)
 
         i_logger.inf(f"Push tag {tag_full}, for project {manifest_proj.name}")
@@ -2100,7 +2100,7 @@ class MpvManifest(WestCommand):
                 manifest_proj.git(['add','west.yml'],
                                   check=False)
                 manifest_proj.git(['commit', '-m',
-                                   f'Automatic update by running the command "west mpv-manifest -a" \nUpdate with arguments add ({args.add}).'], check=False)
+                                   f'Automatic commit by running the command "west mpv-manifest -a" \nUpdate with arguments add ({args.add}).'], check=False)
                 manifest_proj.git(['push', 'origin', f"{branch}"], check=False)
 
             else:
@@ -2331,7 +2331,7 @@ class MpvManifest(WestCommand):
             
             manifest_proj.git(['add', 'mpv.yml', 'west.yml'])
             manifest_proj.git(['commit', '-m',
-                               f'Automatic update by running the command "west mpv-manifest -f" \nUpdate new west.yml and mpv.yml in default branch {default_branch}'], check=False)
+                               f'Automatic commit by running the command "west mpv-manifest -f" \nUpdate new west.yml and mpv.yml in default branch {default_branch}'], check=False)
             manifest_proj.git(['push', 'origin', f"{default_branch}"])
             i_logger.dbg(f"Finish commit")
         else:
@@ -2657,7 +2657,7 @@ class MpvManifest(WestCommand):
                 manifest_proj.git(['add', 'mpv.yml', 'west.yml'],
                                   check=False)
                 manifest_proj.git(['commit', '-m',
-                                   f'Automatic update by running the command "west mpv-manifest -f" \nUpdate from {args.manifest_folder}'], check=False)
+                                   f'Automatic commit by running the command "west mpv-manifest -f" \nUpdate from {args.manifest_folder}'], check=False)
                 manifest_proj.git(['push', 'origin', f"{branch}"], check=False)
 
 
