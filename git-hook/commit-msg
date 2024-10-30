@@ -8,6 +8,7 @@ branchName=${branchPath##*/}      #Get text behind the last / of the branch path
 user=$USER
 hostname=$(hostname)
 unamestr=$(uname)
+current_dir=$(pwd)
 os_type=$OSTYPE
 
 in_docker=false
@@ -33,3 +34,4 @@ echo hostname: $hostname >> $1
 echo in_docker: $in_docker >> $1
 echo unamestr: $unamestr >> $1
 echo os_type: $os_type >> $1
+echo current_dir: $current_dir >> $1
