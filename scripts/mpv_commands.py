@@ -441,6 +441,24 @@ def fetch_proj_depth(project: manifest.Project, fetch_depth: str):
         i_logger.dbg(f"The revision {project.revision} might be sha - do no fetch, because west update did it")
 
 
+def is_shallow_repo(project: manifest.Project) -> bool:
+    '''
+    Check if the current repository is shallow (with clone depth)
+    or is a regular repo.
+    '''
+    cp = project.git(['rev-parse', '--is-shallow-repository'], capture_stdout=True, capture_stderr=True, check=False)
+    is_shallow_repo = cp.stdout.decode('ascii', errors='ignore').strip()
+    i_logger.dbg(f"is_shallow_repo() - repo {project.name}, is_shallow_repo: {is_shallow_repo}")
+    if is_shallow_repo == "true":
+        i_logger.dbg(f"is_shallow_repo() - repo {project.name}, return true")
+        return True
+    
+    i_logger.dbg(f"is_shallow_repo() - repo {project.name}, return false")
+    return False
+
+
+
+
 def dont_use_zephyr():
     i_logger.dbg("Update configuration that we don't use Zephyr")
     update_config('zephyr', 'base', 'not-using-zephyr')
@@ -1184,6 +1202,13 @@ class MpvUpdate(WestCommand):
                 # Else - Use the already clone or fetch that west update did
                 if (args.depth_1 == False and ((project.clone_depth == None or project.clone_depth < 1) or args.full_clone == True)):
                     i_logger.inf(f"fetch all content")
+                    # check if in shallow repo (with depth!=0)
+                    unshallow = []
+                    is_shallow = is_shallow_repo(project)
+                    if is_shallow:
+                        i_logger.dbg(f"repo {project.name} is shallow repo, use --unshallow")
+                        unshallow = ['--unshallow']
+                    
                     project.git(['fetch', '--prune', '-t', '-f', '--all'], check=False)
                     if args.prune_all == True:
                         i_logger.dbg(f"prune_all==True, remove local branch with gone upstream")
@@ -1205,11 +1230,11 @@ class MpvUpdate(WestCommand):
                     current_branch = cp.stdout.decode('ascii', errors='ignore').strip()
                     if len(current_branch) == 0:
                         i_logger.dbg(f"Not in branch (call git fetch): result of 'git branch--show-current' is: {current_branch}")
-                        project.git(['fetch'],
+                        project.git(['fetch'] + unshallow,
                                 check=False)
                     else:
-                        i_logger.dbg(f"In branch  (call git pull): result of 'git branch--show-current' is: {current_branch}")
-                        project.git(['pull'],
+                        i_logger.dbg(f"In branch (call git pull): result of 'git branch--show-current' is: {current_branch}")
+                        project.git(['pull'] + unshallow,
                                 check=False)
                     
                 elif args.depth_1 == True:
@@ -1437,6 +1462,12 @@ class MpvMerge(WestCommand):
                 i_logger.wrn(f'project_mpv for project {project.name} is None - continue')
                 continue
 
+            unshallow = []
+            is_shallow = is_shallow_repo(project)
+            if is_shallow:
+                i_logger.dbg(f"repo {project.name} is shallow repo, use --unshallow")
+                unshallow = ['--unshallow']
+
             content = project_mpv.content
             i_logger.dbg(
                 f"Project {project.name} is active: {self.manifest.is_active(project)}, and is cloned: {project.is_cloned()}, mpv content = {content}, clone-depth: {project.clone_depth}")
@@ -1458,7 +1489,7 @@ class MpvMerge(WestCommand):
                     project.is_cloned() and
                     content != ContentType.COMMANDS):
                 i_logger.dbg(f"git fetch")
-                project.git(['fetch', '-p'],
+                project.git(['fetch', '-p'] + unshallow,
                             capture_stdout=True, capture_stderr=True,
                             check=False)
 
@@ -1492,7 +1523,7 @@ class MpvMerge(WestCommand):
                     project.git(['checkout', args.branch_to, "--"], check=False)
                     if local_dest_exist:
                         i_logger.dbg(f"pull {args.branch_to}")
-                        project.git(['pull'], check=False)
+                        project.git(['pull'] + unshallow, check=False)
                     # In regular repo
                     i_logger.inf(f"merge branch {remote_branch_from} to checkout branch {args.branch_to}")
                     project.git(f"merge {merge_opt} --no-ff --no-edit {remote_branch_from}", check=False)

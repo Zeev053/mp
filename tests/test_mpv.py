@@ -664,6 +664,10 @@ def test_mpv_new_proj(mpv_new_proj_tmpdir):
     print("Check dummy_d 1.0.0")
     print("Call mpv-update to dummy_d__1.0.0_dev")
     cmd('mpv-update --full-clone --mr dummy_d__1.0.0_dev', cwd=str(mpv_new_proj_tmpdir))
+    # Validate that all repos are not shallow    
+    shallow_repos = cmd('forall -c "git rev-parse --is-shallow-repository"', 
+                        cwd=str(mpv_new_proj_tmpdir))
+    assert "true" not in shallow_repos
 
     # Validate that the type of the project is data in mpv.yml
     with open('mpv-test-git-manager/mpv.yml', 'r') as file:
@@ -888,6 +892,11 @@ def test_mpv_merge(mpv_merge_tmpdir):
     print(f"test_mpv_merge: first check dummy_d__1.0.0_dev")
     cmd('mpv-merge proj_1__1.0.0_dev dummy_d__1.0.0_dev', cwd=mpv_merge_tmpdir)
     
+    # Validate that all repos are not shallow after mpv-merge
+    shallow_repos = cmd('forall -c "git rev-parse --is-shallow-repository"',
+                        cwd=mpv_merge_tmpdir)
+    assert "true" not in shallow_repos
+
     print(f"call validate_merge() for data merge")
     validate_merge(mpv_merge_tmpdir, True)
 
@@ -1180,6 +1189,10 @@ def test_mpv_tag(mpv_update_tmpdir):
 
     print(f"test_mpv_tag() - Call mpv-update to set tag: {full_tag}")
     cmd(f'mpv-update --mr {full_tag}', cwd=str(mpv_update_tmpdir))
+    shallow_repos = cmd('forall -c "git rev-parse --is-shallow-repository"',
+                        cwd=str(mpv_update_tmpdir))
+    assert "true" in shallow_repos
+
 
     # Validate that each repo checkout to the correct tag,
     # and the the tag come from previous branch
