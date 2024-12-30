@@ -257,6 +257,16 @@ def _session_repos(tmp_path_factory):
 
     add_tag(rp['external1'], 'tag_3')
 
+    add_commit(rp['proj_common'], 'proj_common in main branch commit',
+               files={'main.cpp': '''
+                #pragma once
+                #include <iostream>
+                // ###############################3
+                // MAIN branch commit
+                // ###############################3
+                // Common file to all projects
+                '''})
+
 
     create_branch(rp['proj_common'], 'develop', True)
     add_commit(rp['proj_common'], 'proj_common in develop branch commit',
@@ -265,6 +275,9 @@ def _session_repos(tmp_path_factory):
                 #include <iostream>
                 // Common file to all projects
                 '''})
+    # to the check in manifest update by folder
+    add_tag(rp['proj_common'], 'tag_1')
+
 
     # Path of mpv-git-west-commands:
     mpv_path = Path(__file__).parent.parent
@@ -336,6 +349,10 @@ def repos_tmpdir(tmp_path, _session_repos):
         subprocess.check_call([GIT, 'config', 'receive.denyCurrentBranch', 'updateInstead'])
         subprocess.check_call([GIT, 'config', '--get', 'receive.denyCurrentBranch'])
         os.chdir(repos)
+
+    # checkout main in order to create local main branch
+    # (If not - after the clone in workspace - the main branch will not be)
+    checkout_branch(repos.joinpath('proj_common'), "main")
 
     # mpv-command = Path(__file__).parents()
     manifest = MANIFEST_TEMPLATE.replace('THE_URL_BASE',

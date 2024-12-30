@@ -9,6 +9,7 @@ import collections
 import os
 import re
 import shutil
+import glob
 import subprocess
 import textwrap
 from pathlib import Path, PurePath
@@ -1269,7 +1270,7 @@ def test_mpv_manifest(mpv_init_tmpdir):
     print("test_mpv_manifest()")
 
     print("Call mpv-manifest")
-    # cmd('mpv-manifest -a module2-data clonee-depth 1', cwd=str(mpv_init_tmpdir))
+    # cmd('mpv-manifest -a module2-data clone-depth 1', cwd=str(mpv_init_tmpdir))
     before_command_list = cmd('list -f "{name} {clone_depth}"')
     cmd('-v mpv-manifest -a module2-data clone-depth 1 -a mpv-git-west-commands clone-depth 1', cwd=str(mpv_init_tmpdir))
 
@@ -1287,3 +1288,96 @@ def test_mpv_manifest(mpv_init_tmpdir):
         assert after_command_list == adapt_before_list
 
 
+def test_mpv_manifest_folder(mpv_init_tmpdir):
+    print("\n\n\n\n--------------------------------")
+    print("test_mpv_manifest_folder()")
+
+    EXTRA_WEST = '''
+  - clone-depth: 1
+    groups:
+    - F_M1
+    - F_M2
+    name: external1-2
+    path: EXTERNAL/external1-2
+    revision: tag_1
+    url: [URL-EXT1]
+ 
+  - groups:
+    - F_M1
+    - F_M2
+    name: proj_common-2
+    path: proj_common-2
+    revision: main
+    url: [URL-COMM]
+'''
+
+    EXTRA_MPV = '''
+  - name: external1-2
+    content: EXTERNAL
+  - name: proj_common-2
+    content: SOURCE
+'''
+    external1_url = cmd('list -f "{url}" external1')
+    EXTRA_WEST = EXTRA_WEST.replace("[URL-EXT1]", external1_url)
+    proj_common_url = cmd('list -f "{url}" proj_common')
+    EXTRA_WEST = EXTRA_WEST.replace("[URL-COMM]", proj_common_url)
+
+    # Define source and destination paths
+    source_dir = mpv_init_tmpdir.joinpath("mpv-test-git-manager")
+    destination_dir = mpv_init_tmpdir.joinpath("temp")
+
+    # Create the destination directory if it doesn't exist
+    os.makedirs(destination_dir, exist_ok=True)
+
+    # Copy all YAML files
+    for yaml_file in glob.glob(os.path.join(source_dir, "*.yml")):
+        shutil.copy2(yaml_file, destination_dir)
+
+    print(f"YAML files copied from {source_dir} to {destination_dir}")
+
+    # Verify if the files were copied successfully
+    copied_files = glob.glob(os.path.join(destination_dir, "*.yml"))
+    assert copied_files
+    print(f"Files were successfully copied: {', '.join(os.path.basename(f) for f in copied_files)}")
+
+    # Add EXTRA_WEST to west.yml
+    extra_west_file = destination_dir.joinpath("west.yml")
+    assert extra_west_file.exists()
+    with open(extra_west_file, 'r') as file:
+        content = file.read()
+
+    # Find the position of "self:" line
+    self_position = content.find("\n  self:")
+    assert self_position != -1
+    updated_content = content[:self_position] + "\n" + EXTRA_WEST + content[self_position:]
+
+    # Update the file with updated content
+    with open(extra_west_file, 'w') as file:
+        file.write(updated_content)    
+    print(f"updated_content added to {extra_west_file}")
+
+    # Add EXTRA_MPV to mpv.yml
+    extra_mpv_file = destination_dir.joinpath("mpv.yml")
+    assert extra_mpv_file.exists()
+
+    with open(extra_mpv_file, 'r') as file:
+        content_mpv = file.read()
+
+    # Find the position of "self:" line
+    self_position_mpv = content_mpv.find("\n  self:")
+    assert self_position_mpv != -1
+    updated_content_mpv = content_mpv[:self_position_mpv] + "\n" + EXTRA_MPV + content_mpv[self_position_mpv:]
+    
+    with open(extra_mpv_file, 'w') as file:
+        file.write(updated_content_mpv)
+    print(f"updated_content added to {extra_mpv_file}")
+
+    print(f"Run the command to update manifest")
+    cmd(f'-v mpv-manifest -f "{destination_dir}"',
+        cwd=str(mpv_init_tmpdir))
+    
+    # 1. Validate that the new repositories exist in the correct directory
+    # 2. Validate that the west.yml contains the new repositories with the correct revision
+    # 3. Validate that the mpv.yml contains the new repositories with the correct content
+    # 4. Validate that the new repo proj_common-2 contain the mpv branches.
+    # 5. Validate that the new repo external1-2 DONT contain the mpv branches.

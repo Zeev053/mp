@@ -273,10 +273,10 @@ def check_branch_ahead_remote(project: manifest.Project, branch: Optional[str] =
 
 
 def new_project(project: manifest.Project):
-    ret = manifest.Project(project.name, 
-                  project.url, 
-                  project.revision, 
-                  project.path,
+    ret = manifest.Project(name = project.name, 
+                  url = project.url, 
+                  revision = project.revision, 
+                  path = project.path,
                   submodules = project.submodules,
                   clone_depth = project.clone_depth,
                   west_commands = project.west_commands,
@@ -303,19 +303,19 @@ def project_set_4_compare(man: manifest.Manifest):
     1. project name 
     2. project yaml, without the revision (exclude command project).
     '''
-    i_logger.dbg(f"project_set_4_compare: arguments: {locals()}\n")
+    i_logger.dbg(f"project_set_4_compare() - arguments: {locals()}\n")
     projects_list = list()
-    i_logger.dbg(f"man.projects length: {len(man.projects)}\n")
+    i_logger.dbg(f"project_set_4_compare() - man.projects length: {len(man.projects)}\n")
     
     for project in man.projects:
-        i_logger.dbg(f"  In project {project.name}")
+        i_logger.dbg(f"  project_set_4_compare() - In project {project.name}")
         project_dict = project.as_dict()
-        i_logger.dbg(f"    project_dict: {project_dict}\n")
+        i_logger.dbg(f"    project_set_4_compare() - project_dict: {project_dict}\n")
         # Remove revision
         rev = "revision"
         west_commands = 'west-commands'
         if rev in project_dict and west_commands not in project_dict:
-            i_logger.dbg(f"    Remove revision\n")
+            i_logger.dbg(f"    project_set_4_compare() - Remove revision\n")
             del project_dict["revision"]
         project_pair = tuple((project.name, yaml.safe_dump(project_dict)))
         projects_list.append(project_pair)
@@ -2005,7 +2005,7 @@ class MpvManifest(WestCommand):
         parser.add_argument('--dr', '--dry-run', action='store_true',
                             help='''Dry run without actually make change''')
 
-        parser.add_argument('-f', '--manifest_folder', action='store_true',
+        parser.add_argument('-f', '--manifest_folder',
                             help='''Folder with new west.yml and mpv.yml files.''')
 
         parser.add_argument('-a', '--add', action='append', default=[], nargs=3,
@@ -2332,14 +2332,13 @@ class MpvManifest(WestCommand):
         i_logger.inf(f"\n\nClone the new repos")
         new_proj_list = list(only_new_project_names_in_new_west)
         i_logger.dbg(f"The new repos to clone: {new_proj_list}")
-        buildin_update_command(self.topdir, new_west_manifest, new_proj_list)
-        
-        i_logger.dbg(f"Fetch the new repos: {new_proj_list}")
         for proj_new in new_proj_list:
             proj_obj = new_west_manifest.get_projects([proj_new])[0]
-            i_logger.dbg(f"Fetch repos: {proj_new}")
-            proj_obj.git(['fetch'])
-
+            clone_path = Path(self.topdir).joinpath(proj_obj.path)
+            i_logger.dbg(f"clone_path: {clone_path}")
+            i_logger.dbg(f"clone repo: {proj_new} to {proj_obj.path}. clone_path : {clone_path}")
+            proj_obj.git(f'clone {proj_obj.url} {clone_path}', cwd=self.topdir)
+            
         # 4.1 Copy west.yml and mpv.yml to default branch
         i_logger.inf(f"\n-----------------------------------------------------")
         i_logger.inf(f"Update west.yml and mpv.yml in default branch")
@@ -2428,8 +2427,6 @@ class MpvManifest(WestCommand):
                     current_branch_projects_names_in_mpv = set(proj[0] for proj in current_branch_mpv_projects_set)
                     i_logger.dbg(f"AFTER DELETE UNWANTED PROJECTS: current_branch_projects_names_in_mpv (branch: {branch}): {current_branch_projects_names_in_mpv}\n")
 
-    
-
 
             # Check if mpv.yml and west.yml of current branch is different from default branch 
             # (^ is for symmetric difference between both sets - item that are not union)
@@ -2443,8 +2440,10 @@ class MpvManifest(WestCommand):
             if len(sym_diff_mpv_current) > 0:
                 i_logger.wrn(f"There are differences between mpv.yml of default branch and current branch: {branch}")
 
-            # Add action of new project to the action list,
+            # If there are differences between west.yml of default branch and current branch,
+            # add action of new project to the action list,
             # in order to add the project to the current branch.
+            # (this actions are not come from the new west.yml file that the user gives)
             # The action should be only if the repo is not going to be deleted
             for proj_name_diff in sym_diff_west_current:
                 # if the repo exist in deleted repositories - continue
@@ -2469,7 +2468,7 @@ class MpvManifest(WestCommand):
                             addition_actions[proj_name_diff].append(ManifestActionType.NEW_SOURCE_PROJ)
                         else:
                             i_logger.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name_diff}")
-                            addition_actions[proj_name_diff].append(ManifestActionType.NEW_OTHER_PROJ)        
+                            addition_actions[proj_name_diff].append(ManifestActionType.NEW_OTHER_PROJ)
 
                     except Exception as e:
                         i_logger.wrn(f"  Failed to add new action. proj_name_diff: {proj_name_diff}, branch: {branch}, Exception: {e}")
@@ -2510,7 +2509,7 @@ class MpvManifest(WestCommand):
             merge_actions = {**addition_actions, **actions}
             i_logger.dbg(f"merge_actions: {merge_actions}, branch: {branch}")
             for proj_name, action_list in merge_actions.items():
-                i_logger.dbg(f"  \nPerfrom actions to {proj_name} in branch: {branch}")
+                i_logger.dbg(f"  \nPerform actions to {proj_name} in branch: {branch}")
                 i_logger.dbg(f"  Actions of {proj_name}: \n  {action_list}")
                 new_proj = new_west_manifest.get_projects([proj_name])[0]
                 # Save the revision of the new repo, becasue it might change when assignment to c_proj
@@ -2518,7 +2517,7 @@ class MpvManifest(WestCommand):
                 new_mpv_proj = new_mpv_manifest.get_projects([proj_name])[0]
                 i_logger.dbg(f"new_proj: {new_proj}, [proj_name: {proj_name} branch: {branch}] ")
                 i_logger.dbg(f"new_proj revision: {new_proj.revision}, new_proj_revision (original before update  c_proj): {new_proj_revision} [proj_name: {proj_name} branch: {branch}] ")
-                i_logger.dbg(f"new_mpv_proj: {new_mpv_proj}, [proj_name: {proj_name} branch: {branch}] ")
+                i_logger.dbg(f"new_mpv_proj: {new_mpv_proj}, content: {new_mpv_proj.content}, [proj_name: {new_mpv_proj.name} branch: {branch}] ")
                 
                 change_enum_list = [
                     ManifestActionType.CHANGE_PATH,
@@ -2587,7 +2586,7 @@ class MpvManifest(WestCommand):
                         if c_mpv_proj.content != ContentType.DATA and                            c_mpv_proj.content != ContentType.SOURCE:
                             c_proj.revision = new_proj.revision
                             i_logger.dbg(f"    Also, update revision to {new_proj.revision}, as the revision content in new poject: {c_proj.revision}")
-                                
+
                     # NEW_OTHER_PROJ (Add project to west.yml and mpv.yml)
                     if action == ManifestActionType.NEW_OTHER_PROJ:
                         c_proj = new_project(new_proj)
@@ -2640,12 +2639,12 @@ class MpvManifest(WestCommand):
                         branch_exist = check_branch_exist(data_proj, branch, True)
                         i_logger.dbg(f"branch_exist: {branch_exist}. branch {branch}")
                         if branch_exist == True:
-                            i_logger.inf(f"In project data {data_proj.name} the branch {branch} exit - dont create again. smpv.merge_method: {smpv.merge_method}")
+                            i_logger.inf(f"In project {data_proj.name} the branch {branch} exit - dont create again. smpv.merge_method: {smpv.merge_method}")
                         elif args.dr == False:
-                            i_logger.inf(f"In project data {data_proj.name} create the branch {branch}. smpv.merge_method: {smpv.merge_method}")
+                            i_logger.inf(f"In project {data_proj.name} create the branch {branch}. smpv.merge_method: {smpv.merge_method}")
                             data_proj.git(['branch', branch, f"origin/{new_proj.revision}"],
-                            check=False)
-                            data_proj.git(['push', '-u', 'origin', branch], check=False)
+                            check=True)
+                            data_proj.git(['push', '-u', 'origin', branch], check=True)
                         else:
                             i_logger.inf(f"Dry run: in project data {data_proj.name} the branch {branch} should be created. smpv.merge_method: {smpv.merge_method}")
 
