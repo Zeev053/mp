@@ -110,7 +110,7 @@ class mpv_log:
 
 i_logger = mpv_log()
 
-
+# TODO: Add support for clone_depth
 class ManifestActionType(enum.Enum):
         NEW_DATA_PROJ = enum.auto()
         NEW_SOURCE_PROJ = enum.auto()
@@ -2256,7 +2256,7 @@ class MpvManifest(WestCommand):
                     i_logger.dbg(f"Take action NEW_OTHER_PROJ for project {proj_name}")
                     actions[proj_name].append(ManifestActionType.NEW_OTHER_PROJ)
                 
-
+            # TODO: Add support to clone_depth.
             # Take care to existing projects that have changes
             # Check what was change:
             # 1. mpv type

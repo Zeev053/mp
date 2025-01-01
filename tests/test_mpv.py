@@ -1375,9 +1375,72 @@ def test_mpv_manifest_folder(mpv_init_tmpdir):
     print(f"Run the command to update manifest")
     cmd(f'-v mpv-manifest -f "{destination_dir}"',
         cwd=str(mpv_init_tmpdir))
+
+    ########## Start the tests ##########
     
     # 1. Validate that the new repositories exist in the correct directory
-    # 2. Validate that the west.yml contains the new repositories with the correct revision
-    # 3. Validate that the mpv.yml contains the new repositories with the correct content
+    external1_2_dir = mpv_init_tmpdir.joinpath("EXTERNAL/external1-2")
+    proj_common_2_dir = mpv_init_tmpdir.joinpath("proj_common-2")
+    assert external1_2_dir.exists()
+    assert proj_common_2_dir.exists()
+    
+    branches = ['proj_1__1.0.0_dev', 'proj_1__1.0.0_integ', 'proj_1__1.0.0_main']
+
+    for branch in branches:
+        # 2. Validate that the west.yml contains the new repositories with the correct revision
+        west_yml = cmd(f'forall -c "git show {branch}:west.yml" manifest',
+            cwd=str(mpv_init_tmpdir))
+        
+        # Parse the YAML content
+        west_yml_yaml = yaml.safe_load(west_yml)
+
+        # Check for the new repositories in the YAML
+        projects = west_yml_yaml.get('manifest', {}).get('projects', [])
+        
+        # Check for external1-2
+        external1_2 = next((proj for proj in projects if proj['name'] == 'external1-2'), None)
+        assert external1_2 is not None, f"external1-2 not found in west.yml for branch {branch}"
+        assert external1_2['clone-depth'] == 1, f"Incorrect clone-depth for external1-2 in branch {branch}"
+        assert external1_2['path'] == 'EXTERNAL/external1-2', f"Incorrect path for external1-2 in branch {branch}"
+        assert external1_2['revision'] == 'tag_1', f"Incorrect revision for external1-2 in branch {branch}"
+        assert set(external1_2['groups']) == set(['F_M1', 'F_M2']), f"Incorrect groups for external1-2 in branch {branch}"
+
+        # Check for proj_common-2
+        proj_common_2 = next((proj for proj in projects if proj['name'] == 'proj_common-2'), None)
+        assert proj_common_2 is not None, f"proj_common-2 not found in west.yml for branch {branch}"
+        # assert proj_common_2['path'] == 'proj_common-2', f"Incorrect path for proj_common-2 in branch {branch}"
+        assert proj_common_2['revision'] == branch, f"Incorrect revision for proj_common-2 in branch {branch}"
+        assert set(proj_common_2['groups']) == set(['F_M1', 'F_M2']), f"Incorrect groups for proj_common-2 in branch {branch}"
+
+        # 3. Validate that the mpv.yml contains the new repositories with the correct content
+        mpv_yml = cmd(f'forall -c "git show {branch}:mpv.yml" manifest',
+            cwd=str(mpv_init_tmpdir))
+
+        mpv_yml_yaml = yaml.safe_load(mpv_yml)
+
+        # Check for the new repositories in the YAML
+        projects_mpv = mpv_yml_yaml.get('manifest', {}).get('projects', [])
+
+        # Check for external1-2
+        external1_2_mpv = next((proj for proj in projects_mpv if proj['name'] == 'external1-2'), None)
+        assert external1_2_mpv is not None, f"external1-2 not found in mpv.yml for branch {branch}"
+        assert external1_2_mpv['content'] == 'EXTERNAL', f"Incorrect content for external1-2 in mpv.yml for branch {branch}"
+
+        # Check for proj_common-2
+        proj_common_2_mpv = next((proj for proj in projects_mpv if proj['name'] == 'proj_common-2'), None)
+        assert proj_common_2_mpv is not None, f"proj_common-2 not found in mpv.yml for branch {branch}"
+        assert proj_common_2_mpv['content'] == 'SOURCE', f"Incorrect content for proj_common-2 in mpv.yml for branch {branch}"
+
+    print("Validation of west.yml and mpv.yml for all branches completed successfully.")
+
     # 4. Validate that the new repo proj_common-2 contain the mpv branches.
+    proj_common_2_branches = cmd('forall -c "git branch -r" proj_common-2', cwd=str(proj_common_2_dir))
+    assert 'origin/proj_1__1.0.0_dev' in proj_common_2_branches
+    assert 'origin/proj_1__1.0.0_integ' in proj_common_2_branches
+    assert 'origin/proj_1__1.0.0_main' in proj_common_2_branches
+
     # 5. Validate that the new repo external1-2 DONT contain the mpv branches.
+    external1_2_branches = cmd('forall -c "git branch -r" external1-2', cwd=str(external1_2_dir))
+    assert 'origin/proj_1__1.0.0_dev' not in external1_2_branches
+    assert 'origin/proj_1__1.0.0_integ' not in external1_2_branches
+    assert 'origin/proj_1__1.0.0_main' not in external1_2_branches
