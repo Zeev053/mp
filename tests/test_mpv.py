@@ -1323,17 +1323,17 @@ def test_mpv_manifest_folder(mpv_init_tmpdir):
     EXTRA_WEST = EXTRA_WEST.replace("[URL-COMM]", proj_common_url)
 
     # Define source and destination paths
-    source_dir = mpv_init_tmpdir.joinpath("mpv-test-git-manager")
+    git_manager_dir = mpv_init_tmpdir.joinpath("mpv-test-git-manager")
     destination_dir = mpv_init_tmpdir.joinpath("temp")
 
     # Create the destination directory if it doesn't exist
     os.makedirs(destination_dir, exist_ok=True)
 
     # Copy all YAML files
-    for yaml_file in glob.glob(os.path.join(source_dir, "*.yml")):
+    for yaml_file in glob.glob(os.path.join(git_manager_dir, "*.yml")):
         shutil.copy2(yaml_file, destination_dir)
 
-    print(f"YAML files copied from {source_dir} to {destination_dir}")
+    print(f"YAML files copied from {git_manager_dir} to {destination_dir}")
 
     # Verify if the files were copied successfully
     copied_files = glob.glob(os.path.join(destination_dir, "*.yml"))
@@ -1388,9 +1388,10 @@ def test_mpv_manifest_folder(mpv_init_tmpdir):
 
     for branch in branches:
         # 2. Validate that the west.yml contains the new repositories with the correct revision
-        west_yml = cmd(f'forall -c "git show {branch}:west.yml" manifest',
-            cwd=str(mpv_init_tmpdir))
-        
+        arg =  f"{branch}:west.yml"
+        west_yml = check_output(['git', 'show', arg,], cwd=str(git_manager_dir))
+        print(f"west_yml in {branch}:\n{west_yml}")
+
         # Parse the YAML content
         west_yml_yaml = yaml.safe_load(west_yml)
 
@@ -1413,8 +1414,9 @@ def test_mpv_manifest_folder(mpv_init_tmpdir):
         assert set(proj_common_2['groups']) == set(['F_M1', 'F_M2']), f"Incorrect groups for proj_common-2 in branch {branch}"
 
         # 3. Validate that the mpv.yml contains the new repositories with the correct content
-        mpv_yml = cmd(f'forall -c "git show {branch}:mpv.yml" manifest',
-            cwd=str(mpv_init_tmpdir))
+        arg =  f"{branch}:mpv.yml"
+        mpv_yml = check_output(['git', 'show', arg,], cwd=str(git_manager_dir))
+        print(f"mpv_yml in {branch}:\n{mpv_yml}")
 
         mpv_yml_yaml = yaml.safe_load(mpv_yml)
 
